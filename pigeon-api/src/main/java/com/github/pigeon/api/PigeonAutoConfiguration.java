@@ -25,7 +25,7 @@ import com.github.pigeon.api.enums.EventPublishProtocol;
 import com.github.pigeon.api.repository.EventRepository;
 import com.github.pigeon.api.repository.SubscriberConfigRepository;
 import com.github.pigeon.api.repository.impl.DiamondSubseriberConfigRepository;
-import com.github.pigeon.api.repository.impl.PublisherConfigParams;
+import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
 import com.github.pigeon.api.repository.impl.RedisEventRepository;
 import com.github.pigeon.api.sender.EventSender;
 import com.github.pigeon.api.sender.HttpSender;
@@ -40,11 +40,11 @@ import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
 @Configuration
 @ConditionalOnMissingBean(DomainEventPublisher.class)
 @AutoConfigureAfter(RedisAutoConfiguration.class)
-@EnableConfigurationProperties(PublisherConfigParams.class)
+@EnableConfigurationProperties(PigeonConfigProperties.class)
 public class PigeonAutoConfiguration {
 
     @Autowired
-    private PublisherConfigParams         publisherConfigParams;
+    private PigeonConfigProperties         publisherConfigParams;
 
     @Autowired
     private StringRedisTemplate           stringRedisTemplate;

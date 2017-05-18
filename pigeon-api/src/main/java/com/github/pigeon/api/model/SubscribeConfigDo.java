@@ -18,8 +18,6 @@ public class SubscribeConfigDo{
 
     private String protocol;
 
-    private String appName;
-
     private String targetAddress;
 
     private String convertor;
@@ -85,14 +83,6 @@ public class SubscribeConfigDo{
         this.masRetryTimes = masRetryTimes;
     }
 
-    public String getAppName() {
-        return appName;
-    }
-
-    public void setAppName(String appName) {
-        this.appName = appName;
-    }
-    
 
     public long getId() {
         return id;

@@ -12,7 +12,7 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
 import com.github.pigeon.api.model.EventWrapper;
 import com.github.pigeon.api.repository.EventRepository;
 import com.github.pigeon.api.repository.SubscriberConfigRepository;
-import com.github.pigeon.api.repository.impl.PublisherConfigParams;
+import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
 import com.github.pigeon.api.utils.PigeonUtils;
 import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
 
@@ -47,7 +47,7 @@ public class DomainEventPublisher  {
     public MDCThreadPoolExecutor eventPublishExecutor;
     
     
-    public DomainEventPublisher(EventRepository eventRepository,EventPublishExecutor eventSendExecutor,SubscriberConfigRepository subseriberConfigFactory, PublisherConfigParams publisherConfigParams, MDCThreadPoolExecutor mdcThreadPoolExecutor)
+    public DomainEventPublisher(EventRepository eventRepository,EventPublishExecutor eventSendExecutor,SubscriberConfigRepository subseriberConfigFactory, PigeonConfigProperties publisherConfigParams, MDCThreadPoolExecutor mdcThreadPoolExecutor)
     {
         this.eventRepository = eventRepository;
         this.eventSendExecutor = eventSendExecutor;
@@ -142,7 +142,6 @@ public class DomainEventPublisher  {
         EventWrapper result = new EventWrapper();
         result.setConfigId(config.getId());
         result.setEvent(config.getConvertor().convert(event, config));
-        result.setAppName(config.getAppName());
         result.setTargetAddress(config.getConvertor().getTargetAddress(event, config));
         result.setSentTimes(0);
         result.setEventType(event.getClass().getSimpleName());

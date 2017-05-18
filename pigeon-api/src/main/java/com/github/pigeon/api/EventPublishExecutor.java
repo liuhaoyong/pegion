@@ -20,7 +20,7 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
 import com.github.pigeon.api.model.EventWrapper;
 import com.github.pigeon.api.repository.EventRepository;
 import com.github.pigeon.api.repository.SubscriberConfigRepository;
-import com.github.pigeon.api.repository.impl.PublisherConfigParams;
+import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
 import com.github.pigeon.api.utils.PigeonUtils;
 import com.github.pigeon.api.utils.executors.CountDownExecutor;
 import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
@@ -43,7 +43,7 @@ public class EventPublishExecutor {
 
     private EventRepository             eventRepository;
 
-    private PublisherConfigParams      publisherConfigParams;
+    private PigeonConfigProperties      publisherConfigParams;
 
     private StringRedisTemplate        redisTemplate;
 
@@ -52,7 +52,7 @@ public class EventPublishExecutor {
     private static volatile boolean isRun = false;
 
     public EventPublishExecutor(SubscriberConfigRepository eventSubseriberConfigFactory,
-                                EventRepository eventRepository, PublisherConfigParams publisherConfigParams,
+                                EventRepository eventRepository, PigeonConfigProperties publisherConfigParams,
                                 StringRedisTemplate redisTemplate,
                                 MDCThreadPoolExecutor mdcThreadPoolExecutor) {
         this.publisherConfigParams = publisherConfigParams;

@@ -47,7 +47,7 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
 
     private PropertiesConfiguration                         propertiesConfiguration;
 
-    private PublisherConfigParams                           publisherConfigParams;
+    private PigeonConfigProperties                           publisherConfigParams;
 
     /**
      * 事件发送器map
@@ -56,7 +56,7 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
 
     public DiamondSubseriberConfigRepository(ApplicationContext applicationContext,
                                              PropertiesConfiguration propertiesConfiguration,
-                                             PublisherConfigParams publisherConfigParams,
+                                             PigeonConfigProperties publisherConfigParams,
                                              Map<EventPublishProtocol, EventSender> eventSenderMap) {
         this.applicationContext = applicationContext;
         this.propertiesConfiguration = propertiesConfiguration;
@@ -231,7 +231,6 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
             //设置其他参数
             config.setFilterExpression(item.getFilterExpression());
             config.setMaxRetryTimes(item.getMasRetryTimes());
-            config.setAppName(item.getAppName());
             config.setTargetAddress(item.getTargetAddress());
             config.setEventType(item.getEventType());
             return config;

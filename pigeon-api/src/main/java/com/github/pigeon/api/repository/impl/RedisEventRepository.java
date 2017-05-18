@@ -48,7 +48,7 @@ public class RedisEventRepository  implements EventRepository {
     private BoundHashOperations<String, String, String> retryHashMap;
     private BoundZSetOperations<String, String>         retryQueue;
     
-    public  RedisEventRepository(PublisherConfigParams params, RedisTemplate<String, String> template)
+    public  RedisEventRepository(PigeonConfigProperties params, RedisTemplate<String, String> template)
     {
         this.redisTemplate = template;
         normalQueue = redisTemplate.boundZSetOps(params.getRedisNormalQueue());

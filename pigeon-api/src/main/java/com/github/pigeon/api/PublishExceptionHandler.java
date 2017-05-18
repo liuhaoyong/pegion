@@ -20,7 +20,7 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
 import com.github.pigeon.api.model.EventWrapper;
 import com.github.pigeon.api.model.FailedEventLog;
 import com.github.pigeon.api.repository.EventRepository;
-import com.github.pigeon.api.repository.impl.PublisherConfigParams;
+import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
 import com.github.pigeon.api.utils.DateUtil;
 import com.github.pigeon.api.utils.PigeonUtils;
 import com.github.pigeon.api.utils.executors.CountDownExecutor;
@@ -42,14 +42,14 @@ public class PublishExceptionHandler {
      */
     private EventPublishExecutor     eventSendExecutor;
 
-    private PublisherConfigParams    publisherConfigParams;
+    private PigeonConfigProperties    publisherConfigParams;
 
     private StringRedisTemplate      enhancedCodisClient;
 
     private ScheduledExecutorService retryTimer = null;
 
     public PublishExceptionHandler(EventRepository eventRepository, EventPublishExecutor eventSendExecutor,
-                                   PublisherConfigParams publisherConfigParams, StringRedisTemplate redisTemplate) {
+                                   PigeonConfigProperties publisherConfigParams, StringRedisTemplate redisTemplate) {
         this.eventRepository = eventRepository;
         this.eventSendExecutor = eventSendExecutor;
         this.publisherConfigParams = publisherConfigParams;

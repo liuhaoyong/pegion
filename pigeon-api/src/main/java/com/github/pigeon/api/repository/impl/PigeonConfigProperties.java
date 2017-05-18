@@ -19,9 +19,9 @@ import com.github.pigeon.api.utils.PigeonUtils;
  * @author liuhaoyong time : 2015年11月3日 下午7:12:28
  */
 @ConfigurationProperties("pigeon")
-public class PublisherConfigParams {
+public class PigeonConfigProperties {
 
-    private static final Logger logger                          = LoggerFactory.getLogger(PublisherConfigParams.class);
+    private static final Logger logger                          = LoggerFactory.getLogger(PigeonConfigProperties.class);
     private static final String split_str                       = "_";
     public static final int     defaultMaxLocalQueueSize        = 10000;
 

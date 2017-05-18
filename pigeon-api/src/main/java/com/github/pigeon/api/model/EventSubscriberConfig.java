@@ -53,9 +53,6 @@ public class EventSubscriberConfig {
      */
     private String targetAddress;
 
-    
-    private String appName;
-
     /**
      * 通知内容生成器
      */
@@ -158,14 +155,6 @@ public class EventSubscriberConfig {
 
     public void setConvertor(EventConvertor<?> contentBuilder) {
         this.convertor = contentBuilder;
-    }
-
-    public String getAppName() {
-        return appName;
-    }
-
-    public void setAppName(String appName) {
-        this.appName = appName;
     }
 
     @Override
