@@ -86,8 +86,8 @@ public class EventPublisherTest  extends BaseTest{
 }
 ```
 
-2. 安装superdiamond，配置事件订阅者，增加事件定于者模块名，并在该模块下配置一个相关的订阅者
-如一个合法的值为
+2. 安装superdiamond，配置事件订阅者，增加事件订阅者配置的模块名，并在该模块下配置相关的订阅者
+如一个合法的订阅者配置示例如下：
 ```
 {"protocol":"HTTP","appName":"PAYMENT-ENGINE","masRetryTimes":3,
 "targetAddress":"http://localhost:8080/event/test",
