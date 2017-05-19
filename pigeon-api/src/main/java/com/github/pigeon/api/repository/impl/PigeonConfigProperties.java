@@ -2,8 +2,6 @@ package com.github.pigeon.api.repository.impl;
 
 import java.net.InetAddress;
 
-import javax.annotation.PostConstruct;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.slf4j.Logger;
@@ -14,7 +12,7 @@ import com.github.pigeon.api.utils.DateUtil;
 import com.github.pigeon.api.utils.PigeonUtils;
 
 /**
- * 事件发布器配置参数
+ * pigeon的配置参数
  * 
  * @author liuhaoyong time : 2015年11月3日 下午7:12:28
  */
@@ -69,26 +67,24 @@ public class PigeonConfigProperties {
     /**
      * accept线程池相关配置
      */
-
     private int                 acceptCorePoolSize              = 5;
 
-    private int                 acceptMaxPoolSize               = 20;
+    private int                 acceptMaxPoolSize               = 5;
 
-    private int                 acceptQueueSize                 = defaultMaxLocalQueueSize;
+    private int                 acceptQueueSize                 = 100;
 
     /**
      * sender线程池相关配置
      */
-    private int                 sendQueueSize      =  defaultMaxLocalQueueSize;
-
-    private int                 sendCorePoolSize        = 5;
+    private int                 sendCorePoolSize        = 10;
 
     private int                 sendMaxPoolSize      = 20;
     
+    private int                 sendQueueSize      =  defaultMaxLocalQueueSize;
     
     
     /**
-     * 事件重试的间隔执行时间，单位分
+     * 异常事件的重试间隔执行时间，单位分
      */
     private long                retryIntervalInMinitues         = 1;
 
@@ -97,16 +93,6 @@ public class PigeonConfigProperties {
      */
     private int                 retryFetchCount                 = 50;
 
-    @PostConstruct
-    private void init() {
-        logger.info("[PigeonEvent] applicationName:{}", applicationName);
-        if (StringUtils.isBlank(applicationName)) {
-            throw new NullPointerException("[PigeonEvent] applicationName is blank....");
-        }
-
-    }
-    
-    
 
     public int getSendQueueSize() {
         return sendQueueSize;
