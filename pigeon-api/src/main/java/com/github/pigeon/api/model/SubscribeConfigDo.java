@@ -25,7 +25,18 @@ public class SubscribeConfigDo{
     private String memo;
 
     private int masRetryTimes;
+    
+    private boolean isPersist=true;
 
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+    
 
     public String getEventType() {
         return eventType;
@@ -84,12 +95,12 @@ public class SubscribeConfigDo{
     }
 
 
-    public long getId() {
-        return id;
+    public boolean isPersist() {
+        return isPersist;
     }
 
-    public void setId(long id) {
-        this.id = id;
+    public void setPersist(boolean isPersist) {
+        this.isPersist = isPersist;
     }
 
     @Override

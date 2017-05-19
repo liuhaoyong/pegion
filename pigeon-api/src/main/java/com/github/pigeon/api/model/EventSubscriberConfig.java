@@ -57,6 +57,11 @@ public class EventSubscriberConfig {
      * 通知内容生成器
      */
     private EventConvertor<?> convertor;
+    
+    /**
+     * 是否持久化消息
+     */
+    private boolean isPersist = true;
 
     public String getEventType() {
         return eventType;
@@ -83,8 +88,14 @@ public class EventSubscriberConfig {
     }
 
 
-    public boolean needToQueue(){
-        return true;
+    public boolean isPersist(){
+        return isPersist;
+    }
+    
+    
+
+    public void setPersist(boolean isPersist) {
+        this.isPersist = isPersist;
     }
 
     /**
@@ -94,8 +105,10 @@ public class EventSubscriberConfig {
      */
     public boolean isMatch(Map<String, Object> eventContext) {
 
-        if (StringUtils.equalsIgnoreCase(StringUtils.trim(filterExpression), "true")
-                || StringUtils.isBlank(filterExpression)) {
+        if (StringUtils.isBlank(filterExpression))
+            return true;
+        
+        if(StringUtils.equalsIgnoreCase(StringUtils.trim(filterExpression), "true")) {
             return true;
         }
 
@@ -103,14 +116,11 @@ public class EventSubscriberConfig {
             return false;
         }
 
-
-        //先用velocity解析，如果报错在用bsh解析，慢慢过渡到全部用velocity解析
+        //velocity解析
         String velocityExpr = null;
         try{
             velocityExpr = StringUtils.replace(StringUtils.containsIgnoreCase(this.filterExpression, "${") ? this.filterExpression : "${" + this.filterExpression + "}", ";", "");
-            boolean result = VelocityUtil.isTrue(velocityExpr,eventContext);
-            logger.info("[PigeonEvent]velcityResult:{},expr:{},paramMap:{}",result,velocityExpr,eventContext);
-            return result;
+            return VelocityUtil.isTrue(velocityExpr,eventContext);
         }catch (Exception e){
             logger.error("[PigeonEvent]velocityError,expr=" + velocityExpr + ",paramMap=" + eventContext,e );
         }

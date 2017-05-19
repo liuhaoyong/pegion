@@ -14,7 +14,7 @@ import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.BoundHashOperations;
 import org.springframework.data.redis.core.BoundZSetOperations;
 import org.springframework.data.redis.core.RedisCallback;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.github.pigeon.api.model.EventWrapper;
 import com.github.pigeon.api.model.FailedEventLog;
@@ -34,7 +34,7 @@ public class RedisEventRepository  implements EventRepository {
     private final static double defaultScore = 0;
    
 
-    private RedisTemplate<String, String>               redisTemplate;
+    private StringRedisTemplate               redisTemplate;
 
     /**
      * 保存初始事件的队列
@@ -48,7 +48,7 @@ public class RedisEventRepository  implements EventRepository {
     private BoundHashOperations<String, String, String> retryHashMap;
     private BoundZSetOperations<String, String>         retryQueue;
     
-    public  RedisEventRepository(PigeonConfigProperties params, RedisTemplate<String, String> template)
+    public  RedisEventRepository(PigeonConfigProperties params, StringRedisTemplate template)
     {
         this.redisTemplate = template;
         normalQueue = redisTemplate.boundZSetOps(params.getRedisNormalQueue());
@@ -63,17 +63,17 @@ public class RedisEventRepository  implements EventRepository {
      *
      * @param event
      */
-    private void consumeQueue(final Event event) throws Exception {
-        if (event.getOpr() == OprTypeEnum.saveEvent) {
+    private void redisOps(final Event event) throws Exception {
+        if (event.getOpr() == OprTypeEnum.persistEvent) {
             normalQueue.add(event.getEvent().genUniformEventKey(), System.currentTimeMillis());
             normalHashMap.put(event.getEvent().genUniformEventKey(), PigeonUtils.marshall(event.getEvent()));
         } else if (event.getOpr() == OprTypeEnum.delEvent) {
             normalQueue.remove(event.getEvent().genUniformEventKey());
             normalHashMap.delete(event.getEvent().genUniformEventKey());
-        } else if (event.getOpr() == OprTypeEnum.saveRetryEvent) {
+        } else if (event.getOpr() == OprTypeEnum.persistExceptionEvent) {
             retryQueue.add(event.getEvent().genUniformEventKey(), event.getScore());
             retryHashMap.put(event.getEvent().genUniformEventKey(), PigeonUtils.marshall(event.getEvent()));
-        } else if (event.getOpr() == OprTypeEnum.delRetryEvent) {
+        } else if (event.getOpr() == OprTypeEnum.delExceptionEvent) {
             retryQueue.remove(event.getEvent().genUniformEventKey());
             retryHashMap.delete(event.getEvent().genUniformEventKey());
         }
@@ -85,8 +85,8 @@ public class RedisEventRepository  implements EventRepository {
      *
      * @param event
      */
-    public void saveEvent(EventWrapper event) {
-        put2Queue(event, OprTypeEnum.saveEvent);
+    public void persistEvent(EventWrapper event) {
+        doCommond(event, OprTypeEnum.persistEvent);
     }
 
     /**
@@ -95,7 +95,7 @@ public class RedisEventRepository  implements EventRepository {
      * @param event
      */
     public void delEvent(EventWrapper event) {
-        put2Queue(event, OprTypeEnum.delEvent);
+        doCommond(event, OprTypeEnum.delEvent);
     }
 
     /**
@@ -113,8 +113,8 @@ public class RedisEventRepository  implements EventRepository {
      * @param event
      * @param score
      */
-    public void saveExceptionalEvent(EventWrapper event, long execTime) {
-        put2Queue(event, execTime, OprTypeEnum.saveRetryEvent);
+    public void persistExceptionalEvent(EventWrapper event, long execTime) {
+        doCommond(event, execTime, OprTypeEnum.persistExceptionEvent);
     }
 
     /**
@@ -123,7 +123,7 @@ public class RedisEventRepository  implements EventRepository {
      * @param event
      */
     public void delExceptionalEvent(EventWrapper event) {
-        put2Queue(event, OprTypeEnum.delRetryEvent);
+        doCommond(event, OprTypeEnum.delExceptionEvent);
     }
 
     /**
@@ -246,7 +246,7 @@ public class RedisEventRepository  implements EventRepository {
      *
      */
     private enum OprTypeEnum {
-        saveEvent, delEvent, saveRetryEvent, delRetryEvent;
+        persistEvent, delEvent, persistExceptionEvent, delExceptionEvent;
     }
 
     /**
@@ -292,14 +292,14 @@ public class RedisEventRepository  implements EventRepository {
      *
      * @param event
      */
-    private void put2Queue(EventWrapper event, OprTypeEnum opr) {
-        put2Queue(event, System.currentTimeMillis(), opr);
+    private void doCommond(EventWrapper event, OprTypeEnum opr) {
+        doCommond(event, System.currentTimeMillis(), opr);
     }
 
-    private void put2Queue(EventWrapper event, long execTime, OprTypeEnum opr) {
+    private void doCommond(EventWrapper event, long execTime, OprTypeEnum opr) {
         try {
             if (event != null && opr != null) {
-                consumeQueue(new Event(event, opr, execTime));
+                redisOps(new Event(event, opr, execTime));
             }
         } catch (Exception e) {
             logger.error(e.getMessage(), e);

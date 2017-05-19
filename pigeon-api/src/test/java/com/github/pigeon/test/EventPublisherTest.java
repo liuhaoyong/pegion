@@ -19,18 +19,6 @@ public class EventPublisherTest  extends BaseTest{
     private DomainEventPublisher eventPublisher;
     
     
-//    public static void main(String[] args) {
-//        SubscribeConfigDo config = new SubscribeConfigDo();
-//        config.setAppName("PAYMENT-ENGINE");
-//        config.setConvertor("defaultSpringProtocolConvertor");
-//        config.setEventType(TestEvent.class.getSimpleName());
-//        config.setId(1);
-//        config.setMasRetryTimes(3);
-//        config.setProtocol("spring");
-//        config.setTargetAddress("testSpringListener");
-//        System.out.println(JSON.toJSON(config));
-//    }
-    
     @Test
     public void testPublishEvent() {
         TestEvent event = new TestEvent();

@@ -18,7 +18,7 @@ public interface EventConvertor<T> {
      * @param config
      * @return
      */
-    T convert(DomainEvent event, EventSubscriberConfig config) throws Exception;
+    T convert(DomainEvent event, EventSubscriberConfig config) ;
     
     /**
      *  返回事件接收方的目标地址

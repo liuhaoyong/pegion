@@ -14,7 +14,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.client.RestTemplate;
 
@@ -50,9 +49,6 @@ public class PigeonAutoConfiguration {
     private StringRedisTemplate           stringRedisTemplate;
 
     @Autowired
-    private RedisTemplate<String, String> redisTemplate;
-
-    @Autowired
     private PropertiesConfiguration       propertiesConfiguration;
 
     @Autowired
@@ -60,9 +56,9 @@ public class PigeonAutoConfiguration {
 
     @Bean
     @ConditionalOnMissingBean(EventRepository.class)
-    @ConditionalOnBean(RedisTemplate.class)
+    @ConditionalOnBean(StringRedisTemplate.class)
     public EventRepository eventRepository() {
-        EventRepository result = new RedisEventRepository(publisherConfigParams, redisTemplate);
+        EventRepository result = new RedisEventRepository(publisherConfigParams, stringRedisTemplate);
         return result;
     }
 
@@ -80,9 +76,9 @@ public class PigeonAutoConfiguration {
     @ConditionalOnMissingBean(EventPublishExecutor.class)
     public EventPublishExecutor eventPublishExecutor(SubscriberConfigRepository eventSubseriberConfigFactory,
                                                      EventRepository eventRepository,
-                                                     @Qualifier("normalEventSendExecutor") MDCThreadPoolExecutor mdcThreadPoolExecutor) {
+                                                     @Qualifier("sendExecutor") MDCThreadPoolExecutor sendExecutor) {
         EventPublishExecutor result = new EventPublishExecutor(eventSubseriberConfigFactory, eventRepository,
-                publisherConfigParams, stringRedisTemplate, mdcThreadPoolExecutor);
+                publisherConfigParams, stringRedisTemplate, sendExecutor);
         return result;
     }
 
@@ -98,33 +94,33 @@ public class PigeonAutoConfiguration {
     }
 
     /**
-     * 发送正常事件的exceutor
+     * 发送事件的exceutor
      * 
      * @return
      */
-    @Bean(name = "normalEventSendExecutor")
+    @Bean(name = "sendExecutor")
     public MDCThreadPoolExecutor normalEventSendExecutor() {
         MDCThreadPoolExecutor pigeonEventPublishExecutor = new MDCThreadPoolExecutor();
-        pigeonEventPublishExecutor.setPname("eventPublishExecutor");
-        pigeonEventPublishExecutor.setCorePoolSize(publisherConfigParams.getEventPublishcorePoolSize());
-        pigeonEventPublishExecutor.setMaxPoolSize(publisherConfigParams.getGetEventPublishMaxPoolSize());
-        pigeonEventPublishExecutor.setQueueCapacity(publisherConfigParams.getMaxLocalQueueSize());
+        pigeonEventPublishExecutor.setPname("sendExecutor");
+        pigeonEventPublishExecutor.setCorePoolSize(publisherConfigParams.getSendCorePoolSize());
+        pigeonEventPublishExecutor.setMaxPoolSize(publisherConfigParams.getSendMaxPoolSize());
+        pigeonEventPublishExecutor.setQueueCapacity(publisherConfigParams.getSendQueueSize());
         pigeonEventPublishExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         return pigeonEventPublishExecutor;
     }
 
     /**
-     * 发送正常事件的exceutor
+     * 接收事件的exceutor
      * 
      * @return
      */
-    @Bean(name = "exceptionEventSendExecutor")
+    @Bean(name = "acceptExecutor")
     public MDCThreadPoolExecutor exceptionEventSendExecutor() {
         MDCThreadPoolExecutor pigeonEventSendExecutor = new MDCThreadPoolExecutor();
-        pigeonEventSendExecutor.setPname("pigeonEventSendExecutor");
-        pigeonEventSendExecutor.setCorePoolSize(publisherConfigParams.getEventSentCorePoolSize());
-        pigeonEventSendExecutor.setMaxPoolSize(publisherConfigParams.getEventSentMaxPoolSize());
-        pigeonEventSendExecutor.setQueueCapacity(publisherConfigParams.getMaxLocalQueueSize());
+        pigeonEventSendExecutor.setPname("acceptExecutor");
+        pigeonEventSendExecutor.setCorePoolSize(publisherConfigParams.getAcceptCorePoolSize());
+        pigeonEventSendExecutor.setMaxPoolSize(publisherConfigParams.getAcceptMaxPoolSize());
+        pigeonEventSendExecutor.setQueueCapacity(publisherConfigParams.getAcceptQueueSize());
         pigeonEventSendExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         return pigeonEventSendExecutor;
     }
@@ -132,13 +128,13 @@ public class PigeonAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean(DomainEventPublisher.class)
     @ConditionalOnBean(value = { EventRepository.class, EventPublishExecutor.class,
-            SubscriberConfigRepository.class }, name = { "normalEventSendExecutor" })
-    public DomainEventPublisher domainEventPublisher(@Qualifier("exceptionEventSendExecutor") MDCThreadPoolExecutor normalEventSendExecutor,
+            SubscriberConfigRepository.class })
+    public DomainEventPublisher domainEventPublisher(@Qualifier("acceptExecutor") MDCThreadPoolExecutor acceptExecutor,
                                                      EventRepository eventRepository,
                                                      EventPublishExecutor eventSendExecutor,
                                                      SubscriberConfigRepository subseriberConfigFactory) {
         DomainEventPublisher result = new DomainEventPublisher(eventRepository, eventSendExecutor,
-                subseriberConfigFactory, publisherConfigParams, normalEventSendExecutor);
+                subseriberConfigFactory, publisherConfigParams, acceptExecutor);
         return result;
     }
 

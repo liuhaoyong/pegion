@@ -17,7 +17,7 @@ public interface EventRepository {
      * @param event
      * @throws Exception
      */
-    public void saveEvent(EventWrapper event)  throws Exception;
+    public void persistEvent(EventWrapper event)  throws Exception;
 
     /**
      * 事件删除
@@ -68,7 +68,7 @@ public interface EventRepository {
      * @param event
      * @param score
      */
-    public void saveExceptionalEvent(EventWrapper event, long execTime)  throws Exception;
+    public void persistExceptionalEvent(EventWrapper event, long execTime)  throws Exception;
 
     /**
      * 删除发送异常的事件

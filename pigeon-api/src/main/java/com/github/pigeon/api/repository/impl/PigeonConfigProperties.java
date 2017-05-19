@@ -25,8 +25,14 @@ public class PigeonConfigProperties {
     private static final String split_str                       = "_";
     public static final int     defaultMaxLocalQueueSize        = 10000;
 
-    private String              applicationName = "pigeonClient";
+    /**
+     * 应用名称，当前应用的唯一标识，redis里会用来作为前缀key
+     */
+    private String              applicationName                 = "pigeonClient";
 
+    /**
+     * 订阅者配置模块名
+     */
     private String              subscribeConfigModuleName       = "event.subscriber.config";
     /**
      * redis异常事件队列
@@ -48,25 +54,7 @@ public class PigeonConfigProperties {
      */
     private String              redisNormalMap                  = "NORMAL_EVENT_MAP";
 
-    /**
-     * 本地队列最大长度
-     */
-    private int                 maxLocalQueueSize               = defaultMaxLocalQueueSize;
 
-    /**
-     * 失败重试抓取数据的间隔执行时间
-     */
-    private long                retryIntervalInMinitues         = 1;
-
-    /**
-     * 重试时每次从redis里获取的事件数量
-     */
-    private int                 retryFetchCount                 = 50;
-
-    /**
-     * 正常抓取事件间隔时间，默认为1分钟
-     */
-    private long                retryTimerInMinitues            = 1;
 
     /**
      * 当使用http投递消息时的连接超时时间
@@ -78,13 +66,36 @@ public class PigeonConfigProperties {
      */
     private int                 httpSoTimeoutInMillisecond      = 5000;
 
-    private int                 eventSentCorePoolSize           = 5;
+    /**
+     * accept线程池相关配置
+     */
 
-    private int                 eventSentMaxPoolSize            = 10;
+    private int                 acceptCorePoolSize              = 5;
 
-    private int                 eventPublishcorePoolSize        = 5;
+    private int                 acceptMaxPoolSize               = 20;
 
-    private int                 getEventPublishMaxPoolSize      = 10;
+    private int                 acceptQueueSize                 = defaultMaxLocalQueueSize;
+
+    /**
+     * sender线程池相关配置
+     */
+    private int                 sendQueueSize      =  defaultMaxLocalQueueSize;
+
+    private int                 sendCorePoolSize        = 5;
+
+    private int                 sendMaxPoolSize      = 20;
+    
+    
+    
+    /**
+     * 事件重试的间隔执行时间，单位分
+     */
+    private long                retryIntervalInMinitues         = 1;
+
+    /**
+     * 重试时每次从redis里获取的事件数量
+     */
+    private int                 retryFetchCount                 = 50;
 
     @PostConstruct
     private void init() {
@@ -94,14 +105,31 @@ public class PigeonConfigProperties {
         }
 
     }
+    
+    
+
+    public int getSendQueueSize() {
+        return sendQueueSize;
+    }
+
+
+
+    public int getSendCorePoolSize() {
+        return sendCorePoolSize;
+    }
+
+
+
+    public int getSendMaxPoolSize() {
+        return sendMaxPoolSize;
+    }
+
+
 
     public String getSubscribeConfigModuleName() {
         return subscribeConfigModuleName;
     }
 
-    public int getMaxLocalQueueSize() {
-        return maxLocalQueueSize;
-    }
 
     public static int getDefaultmaxlocalqueuesize() {
         return defaultMaxLocalQueueSize;
@@ -115,9 +143,6 @@ public class PigeonConfigProperties {
         return retryFetchCount;
     }
 
-    public long getRetryTimerInMinitues() {
-        return retryTimerInMinitues;
-    }
 
     public int getHttpConnectTimeoutInMillisecond() {
         return httpConnectTimeoutInMillisecond;
@@ -127,21 +152,6 @@ public class PigeonConfigProperties {
         return httpSoTimeoutInMillisecond;
     }
 
-    public int getEventSentCorePoolSize() {
-        return eventSentCorePoolSize;
-    }
-
-    public int getEventSentMaxPoolSize() {
-        return eventSentMaxPoolSize;
-    }
-
-    public int getEventPublishcorePoolSize() {
-        return eventPublishcorePoolSize;
-    }
-
-    public int getGetEventPublishMaxPoolSize() {
-        return getEventPublishMaxPoolSize;
-    }
 
     public String getRedisRetryQueue() {
         return getApplicationName() + split_str + redisExceptionQueue;
@@ -163,8 +173,32 @@ public class PigeonConfigProperties {
         return getApplicationName() + split_str + "NormalQueueTaskLock";
     }
 
-    public String getRetryQueueTaskLockName() {
-        return getApplicationName() + split_str + "RetryQueueTaskLock";
+    public String getExceptionQueueTaskLockName() {
+        return getApplicationName() + split_str + "ExceptionQueueTaskLock";
+    }
+
+    public String getRedisExceptionQueue() {
+        return redisExceptionQueue;
+    }
+
+    public String getRedisExceptionMap() {
+        return redisExceptionMap;
+    }
+
+    public String getRedisNormalMap() {
+        return redisNormalMap;
+    }
+
+    public int getAcceptCorePoolSize() {
+        return acceptCorePoolSize;
+    }
+
+    public int getAcceptMaxPoolSize() {
+        return acceptMaxPoolSize;
+    }
+
+    public int getAcceptQueueSize() {
+        return acceptQueueSize;
     }
 
     public String getApplicationName() {

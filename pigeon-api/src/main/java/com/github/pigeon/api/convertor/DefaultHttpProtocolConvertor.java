@@ -14,7 +14,7 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
 public class DefaultHttpProtocolConvertor implements EventConvertor<String> {
 
     @Override
-    public final String convert(DomainEvent event, EventSubscriberConfig config) throws Exception {
+    public final String convert(DomainEvent event, EventSubscriberConfig config){
         return JSON.toJSONString(event);
     }
     

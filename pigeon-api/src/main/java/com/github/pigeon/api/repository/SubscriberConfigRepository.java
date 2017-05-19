@@ -23,8 +23,7 @@ public interface SubscriberConfigRepository {
     
     
     /**
-     * 根据事件ID获得唯一的事件订阅配置
-     * 
+     * 根据事件ID获得唯一的事件订阅者
      * @param configId
      * @return
      */

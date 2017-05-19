@@ -44,16 +44,16 @@ public class PublishExceptionHandler {
 
     private PigeonConfigProperties    publisherConfigParams;
 
-    private StringRedisTemplate      enhancedCodisClient;
+    private StringRedisTemplate      redisTemplate;
 
-    private ScheduledExecutorService retryTimer = null;
+    private ScheduledExecutorService executor = null;
 
     public PublishExceptionHandler(EventRepository eventRepository, EventPublishExecutor eventSendExecutor,
                                    PigeonConfigProperties publisherConfigParams, StringRedisTemplate redisTemplate) {
         this.eventRepository = eventRepository;
         this.eventSendExecutor = eventSendExecutor;
         this.publisherConfigParams = publisherConfigParams;
-        this.enhancedCodisClient = redisTemplate;
+        this.redisTemplate = redisTemplate;
         this.init();
     }
 
@@ -62,18 +62,17 @@ public class PublishExceptionHandler {
      */
     @PostConstruct
     public void init() {
-        retryTimer = Executors.newScheduledThreadPool(1);
-        retryTimer.scheduleAtFixedRate(new Runnable() {
+        executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                logger.info("[PigeonEvent][EVENT_JOB_Exception] start............");
-                MutexTaskExecutor.newMutexTaskExecutor(publisherConfigParams.getRetryQueueTaskLockName(),
-                        enhancedCodisClient, () -> {
-                            handleRetryQueue();
+                logger.info("异常事件重试任务启动");
+                MutexTaskExecutor.newMutexTaskExecutor(publisherConfigParams.getExceptionQueueTaskLockName(),
+                        redisTemplate, () -> {
+                            handleExceptionQueue();
                         }).start(false);
             }
-        }, publisherConfigParams.getRetryTimerInMinitues() * 5, publisherConfigParams.getRetryTimerInMinitues() * 5,
-                TimeUnit.MINUTES);
+        }, 2, 1,TimeUnit.MINUTES);
 
     }
 
@@ -97,10 +96,9 @@ public class PublishExceptionHandler {
     }
 
     /**
-     * 判断时间是否可以被重试
+     * 判断是否可以被重试
      * <p/>
-     * 如果最大重试次数大于当前事件的已重试次数，且能够重试的，则将事件再放入redis中，并移除原有队列中的事件删除， 等待后续重试
-     * 否则移动到mysql数据库中, 等待报警后人工处理
+     * 如果最大重试次数大于当前事件的已重试次数，且接收端返回能够重试则为可重试
      *
      * @param result
      * @return
@@ -112,7 +110,8 @@ public class PublishExceptionHandler {
 
     /**
      * 事件发送异常处理
-     *
+     * 如果当前事件可以重试 ，则将事件持久化到重试队列中，
+     * 并移除原有队列中的事件， 等待后续重试
      * @param eventConfig
      * @param event
      * @param result
@@ -124,8 +123,7 @@ public class PublishExceptionHandler {
                 long intervalInMinitues = event.getSentTimes() * publisherConfigParams.getRetryIntervalInMinitues();
                 Date retryTime = DateUtil.addMinutes(new Date(),
                         Long.valueOf(intervalInMinitues).intValue());
-                eventRepository.saveExceptionalEvent(event, retryTime.getTime());
-                logger.info("[PigeonEvent][canRetry]event:{}", event);
+                eventRepository.persistExceptionalEvent(event, retryTime.getTime());
             } else {
                 //保存到服务器端
                 eventRepository.saveFailedLog(buildFailedEventLog(event, result));
@@ -164,12 +162,11 @@ public class PublishExceptionHandler {
     /**
      *
      */
-    public void handleRetryQueue() {
+    public void handleExceptionQueue() {
         long time = DateUtil.getCurrentTimeMillis();
-        logger.info("[PigeonEvent][EVENT_JOB_Exception]Exception Queue Job Start, isRun:{}............", isRun);
         try {
             if (isRun) {
-                logger.info("[PigeonEvent][EVENT_JOB_Exception] is running,so stop,isRun:{}............", isRun);
+                logger.info("异常重试任务已经在运行");
                 return;
             }
             isRun = true;
@@ -178,8 +175,7 @@ public class PublishExceptionHandler {
 
             /**
              * 如果第一次执行，捞取的事件区间为： [昨天, 上次执行时间+RetryTimerInMinitues],
-             * 防止系统长时间停机导致大量事件漏发 如果不是第一次执行，捞取的事件区间为： [上次执行时间,
-             * 上次执行时间+RetryTimerInMinitues]
+             * 防止系统长时间停机导致大量事件漏发 如果不是第一次执行，捞取的事件区间为： [上次执行时间,上次执行时间+RetryTimerInMinitues]
              */
             if (lastExecuteTime <= 0l) {
                 min = DateUtil.addDays(curDate, -1).getTime();
@@ -269,8 +265,8 @@ public class PublishExceptionHandler {
      */
     @PreDestroy
     public void destory() {
-        if (retryTimer != null) {
-            retryTimer.shutdown();
+        if (executor != null) {
+            executor.shutdown();
         }
     }
 }

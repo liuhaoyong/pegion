@@ -13,94 +13,95 @@ import com.github.pigeon.api.model.EventWrapper;
 import com.github.pigeon.api.repository.EventRepository;
 import com.github.pigeon.api.repository.SubscriberConfigRepository;
 import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
-import com.github.pigeon.api.utils.PigeonUtils;
 import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
-
 
 /**
  * 领域事件发布服务
  *
  * @author liuhaoyong time : 2015年11月3日 上午11:01:03
  */
-public class DomainEventPublisher  {
+public class DomainEventPublisher {
 
-    private static final Logger logger = LoggerFactory.getLogger(DomainEventPublisher.class);
+    private static final Logger        logger = LoggerFactory.getLogger(DomainEventPublisher.class);
 
     /**
      * 事件发送执行器
      */
-    private EventPublishExecutor eventSendExecutor;
-    
+    private EventPublishExecutor       eventSendExecutor;
+
     /**
      * 事件仓储
      */
-    public EventRepository eventRepository;
+    public EventRepository             eventRepository;
 
     /**
      * 事件订阅配置的工厂
      */
-    private SubscriberConfigRepository subseriberConfigFactory;
+    private SubscriberConfigRepository subseriberConfigRepository;
 
     /**
-     * 事件发布线程池
+     * 接收事件的线程池
      */
-    public MDCThreadPoolExecutor eventPublishExecutor;
-    
-    
-    public DomainEventPublisher(EventRepository eventRepository,EventPublishExecutor eventSendExecutor,SubscriberConfigRepository subseriberConfigFactory, PigeonConfigProperties publisherConfigParams, MDCThreadPoolExecutor mdcThreadPoolExecutor)
-    {
+    public MDCThreadPoolExecutor       acceptThreadPool;
+
+    public DomainEventPublisher(EventRepository eventRepository, EventPublishExecutor eventSendExecutor,
+                                SubscriberConfigRepository subseriberConfigFactory,
+                                PigeonConfigProperties publisherConfigParams, MDCThreadPoolExecutor acceptThreadPool) {
         this.eventRepository = eventRepository;
         this.eventSendExecutor = eventSendExecutor;
-        this.subseriberConfigFactory = subseriberConfigFactory;
-        this.eventPublishExecutor=mdcThreadPoolExecutor; 
+        this.subseriberConfigRepository = subseriberConfigFactory;
+        this.acceptThreadPool = acceptThreadPool;
     }
 
-
     /**
-     * 发布一个领域事件
+     * 发布领域事件
+     * 
+     * @param event
+     * @return
      */
-    
     public boolean publish(DomainEvent event) {
         return publish(event, null);
     }
 
-    
+    /**
+     * 发布领域事件，可附加参数
+     * 
+     * @param event
+     * @param args
+     * @return
+     */
     public boolean publish(DomainEvent event, Map<String, Object> args) {
-        
+
         if (event == null) {
             logger.info("事件为空");
             return false;
         }
-        
+
         long time = System.currentTimeMillis();
         try {
-            eventPublishExecutor.execute(new Runnable() {
+            acceptThreadPool.execute(new Runnable() {
                 @Override
                 public void run() {
                     doPublish(event, args);
                 }
             });
-            logger.info("event:{},map:{},elapsed:{}", PigeonUtils.marshall(event), args, System.currentTimeMillis()-time);
+            logger.info("事件成功接收, event:{}, map:{},elapsed:{}", event, args, System.currentTimeMillis() - time);
             return true;
         } catch (Exception e) {
-            logger.error("事件发送异常，event:{},map:{},elapsed:{}", PigeonUtils.marshall(event), args, System.currentTimeMillis()-time, e);
+            logger.error("事件接收异常, event:{},map:{},elapsed:{}", event, args, System.currentTimeMillis() - time, e);
         }
         return false;
     }
 
-    /**
-     * @param event
-     * @param args
-     * @return
-     */
     private boolean doPublish(DomainEvent event, Map<String, Object> args) {
         long start = System.currentTimeMillis();
         try {
 
             final String eventKey = event.getEventKey();
-            
-            // 获得事件订阅者配置，如无事件订阅者，直接返回
-            final List<EventSubscriberConfig> subscriberList = subseriberConfigFactory.getEventSubscriberConfig(event, args);
+
+            // 获得事件订阅者配置，如无事件订阅者，丢弃消息
+            final List<EventSubscriberConfig> subscriberList = subseriberConfigRepository
+                    .getEventSubscriberConfig(event, args);
             if (CollectionUtils.isEmpty(subscriberList)) {
                 logger.info("无订阅者,{}", event);
                 return true;
@@ -108,25 +109,22 @@ public class DomainEventPublisher  {
 
             // 循环发布事件
             for (final EventSubscriberConfig item : subscriberList) {
-                EventWrapper eventWrapper = null;
 
                 try {
-                    eventWrapper = this.buildEventWrapper(event, item, eventKey);
-                    if(item.needToQueue()){
-                        eventRepository.saveEvent(eventWrapper); //持久化事件
+                    EventWrapper eventWrapper = this.buildEventWrapper(event, item, eventKey);
+                    if (item.isPersist()) {
+                        eventRepository.persistEvent(eventWrapper);
                     }
-                    /**
-                     * 异步发送事件
-                     */
+
                     eventSendExecutor.sendEvent(item, eventWrapper);
                 } catch (Exception e) {
-                    logger.error("事件发送异常,eventKey={},event:{}, configID={}", eventKey, eventWrapper, item.getId(), e);
+                    logger.error("事件发送异常,eventKey={},event:{}, configID={}", eventKey, event, item.getId(), e);
                     continue;
                 }
             }
             return true;
         } catch (Exception e) {
-            logger.error("事件发送失败 耗时:{},event={}", ( System.currentTimeMillis()- start), PigeonUtils.marshall(event), e);
+            logger.error("事件发送失败 耗时:{},event={}", (System.currentTimeMillis() - start), event, e);
             return false;
         }
     }
@@ -138,7 +136,7 @@ public class DomainEventPublisher  {
      * @return
      * @throws Exception
      */
-    public final static EventWrapper buildEventWrapper(DomainEvent event, EventSubscriberConfig config,String eventKey) throws Exception {
+    private EventWrapper buildEventWrapper(DomainEvent event, EventSubscriberConfig config, String eventKey) {
         EventWrapper result = new EventWrapper();
         result.setConfigId(config.getId());
         result.setEvent(config.getConvertor().convert(event, config));
@@ -151,8 +149,5 @@ public class DomainEventPublisher  {
         }
         return result;
     }
-    
-   
-    
 
 }

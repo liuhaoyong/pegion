@@ -33,34 +33,33 @@ import com.github.pigeon.api.utils.executors.MutexTaskExecutor;
  */
 public class EventPublishExecutor {
 
-    private static final Logger        logger     = LoggerFactory.getLogger(EventPublishExecutor.class);
+    private static final Logger        logger             = LoggerFactory.getLogger(EventPublishExecutor.class);
 
-    PublishExceptionHandler     publishExceptionHandler;
+    PublishExceptionHandler            publishExceptionHandler;
 
     private SubscriberConfigRepository eventSubseriberConfigFactory;
 
-    private MDCThreadPoolExecutor       pigeonEventSendExecutor;
+    private MDCThreadPoolExecutor      sendExecutor;
 
-    private EventRepository             eventRepository;
+    private EventRepository            eventRepository;
 
-    private PigeonConfigProperties      publisherConfigParams;
+    private PigeonConfigProperties     publisherConfigParams;
 
     private StringRedisTemplate        redisTemplate;
 
-    private ScheduledExecutorService   retryTimer = null;
-    
-    private static volatile boolean isRun = false;
+    private ScheduledExecutorService   processingExecutor = null;
+
+    private static volatile boolean    isRun              = false;
 
     public EventPublishExecutor(SubscriberConfigRepository eventSubseriberConfigFactory,
                                 EventRepository eventRepository, PigeonConfigProperties publisherConfigParams,
-                                StringRedisTemplate redisTemplate,
-                                MDCThreadPoolExecutor mdcThreadPoolExecutor) {
+                                StringRedisTemplate redisTemplate, MDCThreadPoolExecutor sendExecutor) {
         this.publisherConfigParams = publisherConfigParams;
         this.eventSubseriberConfigFactory = eventSubseriberConfigFactory;
         this.eventRepository = eventRepository;
-        this.redisTemplate =        redisTemplate;
-        this.pigeonEventSendExecutor = mdcThreadPoolExecutor;
-           
+        this.redisTemplate = redisTemplate;
+        this.sendExecutor = sendExecutor;
+
     }
 
     /**
@@ -68,30 +67,92 @@ public class EventPublishExecutor {
      */
     @PostConstruct
     public void init() {
-        retryTimer = Executors.newScheduledThreadPool(1);
-        retryTimer.scheduleAtFixedRate(new Runnable() {
+        processingExecutor = Executors.newScheduledThreadPool(1);
+        processingExecutor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                logger.info("[PigeonEvent][EVENT_JOB_Normal] start............");
+                logger.info("任务启动，处理长期在发送队列中的事件");
                 MutexTaskExecutor
                         .newMutexTaskExecutor(publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate, () -> {
-                            handleEventInNormal(-5);
+                            recover();
                         }).start(false);
             }
-        }, publisherConfigParams.getRetryTimerInMinitues() * 3, publisherConfigParams.getRetryTimerInMinitues() * 4,
-                TimeUnit.MINUTES);
+        }, 2, 5, TimeUnit.MINUTES);
 
     }
 
-
+    /**
+     * 发送事件 同步处理 主要处理从队列中拿出来时间
+     *
+     * @param eventKey
+     * @param eventJson
+     */
+    public void sendEvent(String eventKey, String eventJson) {
+        try {
+            if (StringUtils.isBlank(eventJson)) {
+                logger.warn("eventJson is blank, key:{}", eventKey);
+                return;
+            }
+            EventWrapper event = PigeonUtils.unmarshall(eventJson);
+            doSendEvent(eventSubseriberConfigFactory.getEventSubscriberConfig(event.getConfigId()), event);
+        } catch (Exception e) {
+            logger.error("event unmarshall error,event={}", eventKey, e);
+            publishExceptionHandler.handleException(eventKey, eventJson);
+        }
+    }
 
     /**
+     * 发送事件 异步处理 主要处理正常的publish
      *
+     * @param config
+     * @param event
      */
-    public void handleEventInNormal(int beforeMinutes) {
+    public void sendEvent(final EventSubscriberConfig config, final EventWrapper event) {
+        sendExecutor.execute(new Runnable() {
+            public void run() {
+                doSendEvent(config, event);
+            }
+        });
+    }
+
+    /**
+     * @param config
+     * @param event
+     */
+    private void doSendEvent(final EventSubscriberConfig config, final EventWrapper event) {
+        EventSendResult result = null;
+        boolean isPersist = config.isPersist();
+        try {
+            result = config.getEventSender().send(event, config);
+            if (isPersist) {
+                if (result.isSuccess()) {
+                    if (event.isRetry()) {
+                        eventRepository.delExceptionalEvent(event);
+                    } else {
+                        eventRepository.delEvent(event);
+                    }
+                }
+            }
+        } catch (Exception t) {
+            logger.error("Exception to send eventKey:{}", event.getEventKey(), t);
+            result = EventSendResult.getFailResult(t.getMessage(), true);
+        }
+
+        if (result == null || !result.isSuccess()) {
+            logger.info("Failed to send event:{}. result:{}", event, result);
+            if (isPersist) { //如果不需要丢入队列就意味着不需要维护重试等机制
+                publishExceptionHandler.handleException(config, event, result);
+            }
+        }
+    }
+
+    /**
+     * 针对长期在持久化队列里的任务，执行恢复重试， 防止系统重启等原因导致的队列中的任务没有被处理掉
+     */
+    public void recover() {
         long time = System.currentTimeMillis();
         long min = 0;
-        long max = DateUtils.addMinutes(new Date(), beforeMinutes).getTime(); //取五分钟以前的数据
+        long max = DateUtils.addMinutes(new Date(), -5).getTime(); //取五分钟以前的数据
         int count = publisherConfigParams.getRetryFetchCount();
         int offset = 0;
         int iterCount = 0;//循环次数
@@ -111,11 +172,11 @@ public class EventPublishExecutor {
                 try {
                     long total = eventRepository.getEventCount(min, max);
                     logger.info(
-                            "[PigeonEvent][EVENT_JOB_Normal] min:[{}],max:[{}],offset:[{}],count:[{}]-->total:[{}],iterCount:[{}]",
+                            "长期在处理中的任务信息， min:[{}],max:[{}],offset:[{}],count:[{}]-->total:[{}],iterCount:[{}]",
                             min, max, offset, count, total, iterCount);
                     resultMap = eventRepository.extractEvent(min, max, offset, count);
                 } catch (Exception e) {
-                    logger.error("[PigeonEvent][EVENT_JOB_Normal]从redis中获取待重试的事件发生异常", e);
+                    logger.error("从正常队列中获取待重试的事件发生异常", e);
                     break;
                 }
 
@@ -126,8 +187,6 @@ public class EventPublishExecutor {
 
                 int mapSize = resultMap.size();
                 final int countDownSize = Integer.min(mapSize, 10);
-                logger.info("[PigeonEvent][EVENT_JOB_Normal] mapSize:[{}],countDownSize:[{}]............",
-                        countDownSize, countDownSize);
                 CountDownExecutor countDownExecutor = CountDownExecutor.newCountDown(countDownSize,
                         "pigeon-normalQueueTask");
                 int num = 0;
@@ -146,7 +205,6 @@ public class EventPublishExecutor {
                     } catch (Exception e) {
                         logger.error("[PigeonEvent][EVENT_JOB_Normal]数据内容解析或者SendEvent出错,event:" + item, e);
                     }
-
                 }
 
                 if (resultMap.size() < count) {
@@ -157,9 +215,6 @@ public class EventPublishExecutor {
         } finally {
             isRun = false;
         }
-        logger.info("[PigeonEvent][EVENT_JOB_Normal] Queue Job end[{}],isRun:{}............",
-                (System.currentTimeMillis() - time), isRun);
-
     }
 
     /**
@@ -167,72 +222,9 @@ public class EventPublishExecutor {
      */
     @PreDestroy
     public void destory() {
-        if (retryTimer != null) {
-            retryTimer.shutdown();
+        if (processingExecutor != null) {
+            processingExecutor.shutdown();
         }
     }
 
-    /**
-     * 发送事件 同步处理 主要处理从队列中拿出来时间
-     *
-     * @param eventKey
-     * @param eventJson
-     */
-    public void sendEvent(final String eventKey, final String eventJson) {
-        try {
-            if (StringUtils.isBlank(eventJson)) {
-                logger.warn("[PigeonEvent] eventJson is blank! key:{}", eventKey);
-                return;
-            }
-            EventWrapper event = PigeonUtils.unmarshall(eventJson);
-            doSendEvent(eventSubseriberConfigFactory.getEventSubscriberConfig(event.getConfigId()), event);
-        } catch (Exception e) {
-            logger.error("[PigeonEvent]event unmarshall error:[" + eventKey + "]", e);
-            publishExceptionHandler.handleException(eventKey, eventJson);
-        }
-    }
-
-    /**
-     * 发送事件 异步处理 主要处理正常的publish
-     *
-     * @param config
-     * @param event
-     */
-    public void sendEvent(final EventSubscriberConfig config, final EventWrapper event) {
-        pigeonEventSendExecutor.execute(new Runnable() {
-            public void run() {
-                doSendEvent(config, event);
-            }
-        });
-    }
-
-    /**
-     * @param config
-     * @param event
-     */
-    private void doSendEvent(final EventSubscriberConfig config, final EventWrapper event) {
-        EventSendResult result = null;
-        boolean needToQueue = config.needToQueue();
-        try {
-            result = config.getEventSender().send(event, config);
-            if (needToQueue) {
-                if (result.isSuccess()) {
-                    if (event.isRetry()) {
-                        eventRepository.delExceptionalEvent(event);
-                    } else {
-                        eventRepository.delEvent(event);
-                    }
-                }
-            }
-        } catch (Exception t) {
-            logger.error("[PigeonEvent]Exception to send eventKey:{}", event.getEventKey(), t);
-            result = EventSendResult.getFailResult(t.getMessage(), true);
-        }
-        if (result == null || !result.isSuccess()) {
-            logger.warn("[PigeonEvent]Failed to send event:{}. result:{}", event, result);
-            if (needToQueue) { //如果不需要丢入队列就意味着不需要维护重试等机制
-                publishExceptionHandler.handleException(config, event, result);
-            }
-        }
-    }
 }
