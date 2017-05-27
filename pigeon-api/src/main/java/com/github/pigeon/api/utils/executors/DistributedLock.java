@@ -19,11 +19,6 @@ public interface DistributedLock {
     boolean tryLock(long waitTime, long lockTimeoutTime, TimeUnit unit) ;
 
     /**
-     * 
-     * @param leaseTime 如果锁获取成功，锁超时时间
-     * @param unit 时间单位
-     */
-    /**
      * 获取分布式锁
      * @param lockTimeoutTime
      * @param unit
