@@ -1,7 +1,6 @@
 package com.github.pigeon.api.utils.executors;
 
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
@@ -17,7 +16,7 @@ import redis.clients.jedis.Jedis;
  * 
  * @author liuhaoyong 2017年5月12日 下午3:55:24
  */
-public class CacheLock  implements CLock {
+public class RedisLock  implements DistributedLock {
 
     /**
      * redis模板
@@ -29,7 +28,7 @@ public class CacheLock  implements CLock {
      */
     private String lockName;
     
-    public CacheLock(StringRedisTemplate template, java.lang.String lockName) {
+    public RedisLock(StringRedisTemplate template, java.lang.String lockName) {
         this.lockName = lockName;
         this.template = template;
         
@@ -47,15 +46,13 @@ public class CacheLock  implements CLock {
         {
             @Override
             public String doInRedis(RedisConnection connection) throws DataAccessException {
-                long time = Integer.MAX_VALUE;
-                if(leaseTime > 0){
-                    if(leaseTime > Integer.MAX_VALUE){
-                        time = Integer.MAX_VALUE;
-                    }else{
-                        time = unit.toSeconds(leaseTime);
-                    }
-                }
+                long time = unit.toSeconds(leaseTime);
                 Jedis jedis = (Jedis)connection.getNativeConnection();
+                
+                /**
+                 * nx 表示key不存在时才能set成功
+                 * ex 表示过期时间的单位是秒
+                 */
                 return jedis.set(lockName.getBytes(), Thread.currentThread().getName().getBytes(), "NX".getBytes(), "EX".getBytes(), time);
             }
    
@@ -67,9 +64,7 @@ public class CacheLock  implements CLock {
     }
 
     @Override
-    public boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException {
-        if (Thread.interrupted())
-            throw new InterruptedException();
+    public boolean tryLock(long waitTime, long leaseTime, TimeUnit unit)  {
         boolean result = tryAcquire(leaseTime, unit);
         if(result){
             return true;
@@ -79,7 +74,7 @@ public class CacheLock  implements CLock {
         long timeout = deadline;
         long sleepTime = 3;//初始3毫秒
         long roopCount = 0;
-        for(;;){
+        while(true){
             roopCount ++ ;
             //保护措施，sleep时间随着循环测试增加，超过一定测试就直接返回获取锁失败
             if(roopCount >= 800){
@@ -99,26 +94,26 @@ public class CacheLock  implements CLock {
                 return true;
             }
             //适当睡眠，避免对codis过于频繁的访问
-            TimeUnit.MILLISECONDS.sleep(sleepTime);
+            try {
+                TimeUnit.MILLISECONDS.sleep(sleepTime);
+            } catch (InterruptedException e) {
+                return false;
+            }
 
             timeout = deadline - DateUtil.getCurrentTimeMillis();
             if(timeout <= 0L){
                 return false;
             }
             if (Thread.interrupted()){
-                throw new InterruptedException();
+                return false;
             }
         }
 
     }
 
     @Override
-    public void lock(long leaseTime, TimeUnit unit) {
-        try {
-            lockInterruptibly(leaseTime, unit);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+    public boolean lock(long leaseTime, TimeUnit unit) {
+       return tryAcquire(leaseTime, unit);
     }
 
     @Override
@@ -127,50 +122,7 @@ public class CacheLock  implements CLock {
     }
 
     @Override
-    public void lock() {
-        lock(-1,null);
-    }
-
-    @Override
-    public void lockInterruptibly(long leaseTime, TimeUnit unit) throws InterruptedException{
-        if (Thread.interrupted())
-            throw new InterruptedException();
-        boolean result = tryAcquire(leaseTime, unit);
-        if(!result){
-            throw new InterruptedException();
-        }
-    }
-
-    @Override
-    public void lockInterruptibly() throws InterruptedException {
-        lockInterruptibly(-1,null);
-    }
-
-    @Override
-    public boolean tryLock() {
-        return tryAcquire(-1,null);
-    }
-
-    @Override
-    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
-        return tryAcquire(time,unit);
-    }
-
-    @Override
-    public void unlock() {
-        delete();
-    }
-
-    @Override
-    public Condition newCondition() {
-        throw new UnsupportedOperationException();
-    }
-
-
-    /**
-     * @return
-     */
-    public void delete() {
+    public void releaseLock() {
         template.delete(lockName);
     }
 

@@ -33,7 +33,7 @@ import com.github.pigeon.api.utils.executors.MutexTaskExecutor;
  */
 public class PublishExceptionHandler {
 
-    private static final Logger      logger     = LoggerFactory.getLogger(PublishExceptionHandler.class);
+    private static final Logger      logger   = LoggerFactory.getLogger(PublishExceptionHandler.class);
 
     private EventRepository          eventRepository;
 
@@ -42,7 +42,7 @@ public class PublishExceptionHandler {
      */
     private EventPublishExecutor     eventSendExecutor;
 
-    private PigeonConfigProperties    publisherConfigParams;
+    private PigeonConfigProperties   publisherConfigParams;
 
     private StringRedisTemplate      redisTemplate;
 
@@ -67,12 +67,12 @@ public class PublishExceptionHandler {
             @Override
             public void run() {
                 logger.info("异常事件重试任务启动");
-                MutexTaskExecutor.newMutexTaskExecutor(publisherConfigParams.getExceptionQueueTaskLockName(),
-                        redisTemplate, () -> {
+                MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getExceptionQueueTaskLockName(),
+                        redisTemplate, false, () -> {
                             handleExceptionQueue();
-                        }).start(false);
+                        });
             }
-        }, 2, 1,TimeUnit.MINUTES);
+        }, 2, 1, TimeUnit.MINUTES);
 
     }
 
@@ -109,9 +109,8 @@ public class PublishExceptionHandler {
     }
 
     /**
-     * 事件发送异常处理
-     * 如果当前事件可以重试 ，则将事件持久化到重试队列中，
-     * 并移除原有队列中的事件， 等待后续重试
+     * 事件发送异常处理 如果当前事件可以重试 ，则将事件持久化到重试队列中， 并移除原有队列中的事件， 等待后续重试
+     * 
      * @param eventConfig
      * @param event
      * @param result
@@ -121,8 +120,7 @@ public class PublishExceptionHandler {
             if (canRetryCheck(eventConfig, event, result)) {
                 event.setSentTimes(event.getSentTimes() + 1);
                 long intervalInMinitues = event.getSentTimes() * publisherConfigParams.getRetryIntervalInMinitues();
-                Date retryTime = DateUtil.addMinutes(new Date(),
-                        Long.valueOf(intervalInMinitues).intValue());
+                Date retryTime = DateUtil.addMinutes(new Date(), Long.valueOf(intervalInMinitues).intValue());
                 eventRepository.persistExceptionalEvent(event, retryTime.getTime());
             } else {
                 //保存到服务器端
@@ -175,7 +173,8 @@ public class PublishExceptionHandler {
 
             /**
              * 如果第一次执行，捞取的事件区间为： [昨天, 上次执行时间+RetryTimerInMinitues],
-             * 防止系统长时间停机导致大量事件漏发 如果不是第一次执行，捞取的事件区间为： [上次执行时间,上次执行时间+RetryTimerInMinitues]
+             * 防止系统长时间停机导致大量事件漏发 如果不是第一次执行，捞取的事件区间为：
+             * [上次执行时间,上次执行时间+RetryTimerInMinitues]
              */
             if (lastExecuteTime <= 0l) {
                 min = DateUtil.addDays(curDate, -1).getTime();

@@ -72,10 +72,10 @@ public class EventPublishExecutor {
             @Override
             public void run() {
                 logger.info("任务启动，处理长期在发送队列中的事件");
-                MutexTaskExecutor
-                        .newMutexTaskExecutor(publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate, () -> {
+                MutexTaskExecutor.execute(60*60, publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate, false,
+                        () -> {
                             recover();
-                        }).start(false);
+                        });
             }
         }, 2, 5, TimeUnit.MINUTES);
 
@@ -171,8 +171,7 @@ public class EventPublishExecutor {
                 Map<String, String> resultMap;
                 try {
                     long total = eventRepository.getEventCount(min, max);
-                    logger.info(
-                            "长期在处理中的任务信息， min:[{}],max:[{}],offset:[{}],count:[{}]-->total:[{}],iterCount:[{}]",
+                    logger.info("长期在处理中的任务信息， min:[{}],max:[{}],offset:[{}],count:[{}]-->total:[{}],iterCount:[{}]",
                             min, max, offset, count, total, iterCount);
                     resultMap = eventRepository.extractEvent(min, max, offset, count);
                 } catch (Exception e) {
