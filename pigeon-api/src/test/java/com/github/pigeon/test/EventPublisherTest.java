@@ -25,18 +25,31 @@ public class EventPublisherTest  extends BaseTest{
         event.setId("1234");
         event.setName("sdff");
         event.setPwd("sdfdsf");
+        event.setNotifyAddress("http://localhost:8080/event/test");
         boolean isSuccess = eventPublisher.publish(event);
         Assert.assertEquals(true, isSuccess);
     }
     
     
-    static class TestEvent implements DomainEvent
+    public static class TestEvent implements DomainEvent
     {
         private String id;
         
         private String name;
         
         private String pwd;
+        
+        private String notifyAddress;
+        
+        
+
+        public String getNotifyAddress() {
+            return notifyAddress;
+        }
+
+        public void setNotifyAddress(String notifyAddress) {
+            this.notifyAddress = notifyAddress;
+        }
 
         @Override
         public String getEventKey() {

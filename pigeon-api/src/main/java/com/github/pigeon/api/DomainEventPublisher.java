@@ -1,18 +1,24 @@
 package com.github.pigeon.api;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.xml.bind.ValidationException;
+
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import com.github.pigeon.api.convertor.EventConvertor;
 import com.github.pigeon.api.model.DomainEvent;
 import com.github.pigeon.api.model.EventSubscriberConfig;
 import com.github.pigeon.api.model.EventWrapper;
 import com.github.pigeon.api.repository.EventRepository;
 import com.github.pigeon.api.repository.SubscriberConfigRepository;
 import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
+import com.github.pigeon.api.utils.VelocityUtil;
 import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
 
 /**
@@ -85,10 +91,10 @@ public class DomainEventPublisher {
                     doPublish(event, args);
                 }
             });
-            logger.info("事件成功接收, event:{}, map:{},elapsed:{}", event, args, System.currentTimeMillis() - time);
+            logger.info("事件发布成功, event={}, map={},elapsed={}", event, args, System.currentTimeMillis() - time);
             return true;
         } catch (Exception e) {
-            logger.error("事件接收异常, event:{},map:{},elapsed:{}", event, args, System.currentTimeMillis() - time, e);
+            logger.error("事件发布异常, event={},map={},elapsed={}", event, args, System.currentTimeMillis() - time, e);
         }
         return false;
     }
@@ -137,10 +143,20 @@ public class DomainEventPublisher {
      * @throws Exception
      */
     private EventWrapper buildEventWrapper(DomainEvent event, EventSubscriberConfig config, String eventKey) {
+        EventConvertor convertor = config.getConvertor();
+        Object eventContent = convertor.convert(event, config);
+        String targetAddress = getTargetAddress(convertor,event,config);
+        if (eventContent == null || StringUtils.isBlank(targetAddress)) {
+            logger.error(
+                    "转换后的事件内容或者目标地址为空, 忽略发送, 请检查时间订阅者配置是否正确， eventContent={},targetAddress={}, subscriberConfig={}",
+                    eventContent, targetAddress, config);
+            throw new RuntimeException("转换后的事件内容或者目标地址为空，忽略发送");
+        }
+
         EventWrapper result = new EventWrapper();
         result.setConfigId(config.getId());
-        result.setEvent(config.getConvertor().convert(event, config));
-        result.setTargetAddress(config.getConvertor().getTargetAddress(event, config));
+        result.setEvent(eventContent);
+        result.setTargetAddress(targetAddress);
         result.setSentTimes(0);
         result.setEventType(event.getClass().getSimpleName());
         result.setEventKey(eventKey);
@@ -150,4 +166,34 @@ public class DomainEventPublisher {
         return result;
     }
 
+    /**
+     * 获取目标地址
+     * <p>1. 先通过convertor里的实现取通知地址
+     * <p>2. 当订阅配置里targetAddres为地址取值表达式时，执行该表达式取值
+     * <p>3. 不是取值表达式，则认为配置的就是一个原始地址，直接返回
+     * @param event
+     * @param config
+     * @return
+     */
+    private String getTargetAddress(EventConvertor convertor, DomainEvent event, EventSubscriberConfig config) {
+        
+        String result = convertor.getTargetAddress(event, config);
+        if(StringUtils.isNotBlank(result))
+        {
+            return result;
+        }
+        
+        String targetAddress = config.getTargetAddress();
+        if (StringUtils.startsWith(targetAddress, "${")) {
+            Map<String, Object> map = new HashMap<String, Object>();
+            map.put("event", event);
+            try {
+                targetAddress = VelocityUtil.getString(targetAddress, map);
+            } catch (ValidationException e) {
+                logger.error("获取通知地址异常:eventKey={}", event.getEventKey(), e);
+                return null;
+            }
+        }
+        return targetAddress;
+    }
 }

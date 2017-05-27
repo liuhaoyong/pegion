@@ -11,15 +11,15 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
  * @author liuhaoyong
  * time : 2015年11月3日 下午8:50:03
  */
-public class DefaultHttpProtocolConvertor implements EventConvertor<String> {
+public class DefaultHttpProtocolConvertor implements EventConvertor<String, DomainEvent> {
 
     @Override
-    public final String convert(DomainEvent event, EventSubscriberConfig config){
+    public  String convert(DomainEvent event, EventSubscriberConfig config){
         return JSON.toJSONString(event);
     }
     
     @Override
     public String getTargetAddress(DomainEvent event, EventSubscriberConfig config) {
-        return config.getTargetAddress();
+        return null;
     }
 }

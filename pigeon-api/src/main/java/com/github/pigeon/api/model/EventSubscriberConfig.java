@@ -56,7 +56,7 @@ public class EventSubscriberConfig {
     /**
      * 通知内容生成器
      */
-    private EventConvertor<?> convertor;
+    private EventConvertor convertor;
     
     /**
      * 是否持久化消息
@@ -159,11 +159,11 @@ public class EventSubscriberConfig {
         this.targetAddress = targetAddress;
     }
 
-    public EventConvertor<?> getConvertor() {
+    public EventConvertor getConvertor() {
         return convertor;
     }
 
-    public void setConvertor(EventConvertor<?> contentBuilder) {
+    public void setConvertor(EventConvertor contentBuilder) {
         this.convertor = contentBuilder;
     }
 

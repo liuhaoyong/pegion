@@ -203,7 +203,7 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
                         item.getId(), item.getConvertor());
                 return null;
             }
-            config.setConvertor((EventConvertor<?>) obj);
+            config.setConvertor((EventConvertor<?,?>) obj);
 
             //设置sender
             config.setProtocol(EventPublishProtocol.valueOf(StringUtils.upperCase(item.getProtocol())));

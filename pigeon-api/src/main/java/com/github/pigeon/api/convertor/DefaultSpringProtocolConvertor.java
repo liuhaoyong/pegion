@@ -9,7 +9,7 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
  * @author liuhaoyong
  * time : 2015年11月3日 上午10:17:08
  */
-public class DefaultSpringProtocolConvertor implements EventConvertor<DomainEvent> {
+public class DefaultSpringProtocolConvertor implements EventConvertor<DomainEvent,DomainEvent> {
 
 
     @Override
@@ -19,6 +19,6 @@ public class DefaultSpringProtocolConvertor implements EventConvertor<DomainEven
 
     @Override
     public String getTargetAddress(DomainEvent event, EventSubscriberConfig config) {
-        return config.getTargetAddress();
+        return null;
     }
 }
