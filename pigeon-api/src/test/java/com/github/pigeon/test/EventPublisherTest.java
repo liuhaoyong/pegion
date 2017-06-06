@@ -137,7 +137,6 @@ public class EventPublisherTest  extends BaseTest{
     @Test
     public void testHandleNormalEventForLoop() throws Exception
     {
-        pigeonConfigProperties.setRetryFetchCount(1);
         TestEvent content = new TestEvent();
         content.setId("sdfsdf");
         content.setName("sdfdsf");
