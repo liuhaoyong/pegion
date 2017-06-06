@@ -11,7 +11,7 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
  * @author liuhaoyong
  * time : 2015年11月3日 下午8:50:03
  */
-public class DefaultHttpProtocolConvertor implements EventConvertor<String, DomainEvent> {
+public class DefaultHttpProtocolConvertor implements EventConvertor<DomainEvent> {
 
     @Override
     public  String convert(DomainEvent event, EventSubscriberConfig config){

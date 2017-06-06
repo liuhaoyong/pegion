@@ -64,18 +64,19 @@ public class RedisEventRepository  implements EventRepository {
      * @param event
      */
     private void redisOps(final Event event) throws Exception {
+        String eventKey = event.getEvent().genUniformEventKey();
         if (event.getOpr() == OprTypeEnum.persistEvent) {
-            normalQueue.add(event.getEvent().genUniformEventKey(), System.currentTimeMillis());
-            normalHashMap.put(event.getEvent().genUniformEventKey(), PigeonUtils.marshall(event.getEvent()));
+            normalQueue.add(eventKey, event.getScore());
+            normalHashMap.put(eventKey, PigeonUtils.marshall(event.getEvent()));
         } else if (event.getOpr() == OprTypeEnum.delEvent) {
-            normalQueue.remove(event.getEvent().genUniformEventKey());
-            normalHashMap.delete(event.getEvent().genUniformEventKey());
+            normalQueue.remove(eventKey);
+            normalHashMap.delete(eventKey);
         } else if (event.getOpr() == OprTypeEnum.persistExceptionEvent) {
-            retryQueue.add(event.getEvent().genUniformEventKey(), event.getScore());
-            retryHashMap.put(event.getEvent().genUniformEventKey(), PigeonUtils.marshall(event.getEvent()));
+            retryQueue.add(eventKey, event.getScore());
+            retryHashMap.put(eventKey, PigeonUtils.marshall(event.getEvent()));
         } else if (event.getOpr() == OprTypeEnum.delExceptionEvent) {
-            retryQueue.remove(event.getEvent().genUniformEventKey());
-            retryHashMap.delete(event.getEvent().genUniformEventKey());
+            retryQueue.remove(eventKey);
+            retryHashMap.delete(eventKey);
         }
     }
 
@@ -191,7 +192,7 @@ public class RedisEventRepository  implements EventRepository {
 
             @Override
             public List<String> doInRedis(RedisConnection connection) throws DataAccessException {
-                Set<byte[]>  response = connection.zRangeByScore(set.getKey().getBytes(), 1, 3, 0, 3);
+                Set<byte[]>  response = connection.zRangeByScore(set.getKey().getBytes(), min, max, offset, count);
                 List<String> result = new ArrayList<String>();
                 for(byte[] item: response)
                 {
@@ -245,7 +246,7 @@ public class RedisEventRepository  implements EventRepository {
     /**
      *
      */
-    private enum OprTypeEnum {
+    public static enum OprTypeEnum {
         persistEvent, delEvent, persistExceptionEvent, delExceptionEvent;
     }
 
@@ -259,11 +260,6 @@ public class RedisEventRepository  implements EventRepository {
         private OprTypeEnum opr;
         private double score;
 
-        public Event(EventWrapper event, OprTypeEnum opr) {
-            this.event = event;
-            this.opr = opr;
-            this.score = defaultScore;
-        }
 
         public Event(EventWrapper event, OprTypeEnum opr, double score) {
             this.event = event;
@@ -292,11 +288,11 @@ public class RedisEventRepository  implements EventRepository {
      *
      * @param event
      */
-    private void doCommond(EventWrapper event, OprTypeEnum opr) {
+    public void doCommond(EventWrapper event, OprTypeEnum opr) {
         doCommond(event, System.currentTimeMillis(), opr);
     }
 
-    private void doCommond(EventWrapper event, long execTime, OprTypeEnum opr) {
+    public void doCommond(EventWrapper event, long execTime, OprTypeEnum opr) {
         try {
             if (event != null && opr != null) {
                 redisOps(new Event(event, opr, execTime));

@@ -23,7 +23,6 @@ import com.github.pigeon.api.repository.EventRepository;
 import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
 import com.github.pigeon.api.utils.DateUtil;
 import com.github.pigeon.api.utils.PigeonUtils;
-import com.github.pigeon.api.utils.executors.CountDownExecutor;
 import com.github.pigeon.api.utils.executors.MutexTaskExecutor;
 
 /**
@@ -54,7 +53,6 @@ public class PublishExceptionHandler {
         this.eventSendExecutor = eventSendExecutor;
         this.publisherConfigParams = publisherConfigParams;
         this.redisTemplate = redisTemplate;
-        this.init();
     }
 
     /**
@@ -67,12 +65,12 @@ public class PublishExceptionHandler {
             @Override
             public void run() {
                 logger.info("异常事件重试任务启动");
-                MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getExceptionQueueTaskLockName(),
-                        redisTemplate, false, () -> {
+                MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getExceptionQueueTaskLockName(), redisTemplate,
+                        false, () -> {
                             handleExceptionQueue();
                         });
             }
-        }, 2, 1, TimeUnit.MINUTES);
+        }, 1, 1, TimeUnit.MINUTES);
 
     }
 
@@ -86,7 +84,7 @@ public class PublishExceptionHandler {
         try {
             EventWrapper event = new EventWrapper();
             event.setEventKey(eventKey);
-            event.setEvent(eventString);
+            event.setContent(eventString);
             eventRepository.saveFailedLog(buildFailedEventLog(event, null));
             eventRepository.delExceptionalEvent(event);
             eventRepository.delEvent(event);
@@ -172,80 +170,45 @@ public class PublishExceptionHandler {
             Date curDate = new Date();
 
             /**
-             * 如果第一次执行，捞取的事件区间为： [昨天, 上次执行时间+RetryTimerInMinitues],
-             * 防止系统长时间停机导致大量事件漏发 如果不是第一次执行，捞取的事件区间为：
-             * [上次执行时间,上次执行时间+RetryTimerInMinitues]
+             * 如果第一次执行，捞取的事件区间为： [昨天, 当前时间], 防止系统长时间停机导致大量事件漏发 
+             * 如果不是第一次执行，捞取的事件区间为：[上次执行时间,当前事件]
              */
             if (lastExecuteTime <= 0l) {
                 min = DateUtil.addDays(curDate, -1).getTime();
             } else {
                 min = lastExecuteTime;
             }
-            int count = publisherConfigParams.getRetryFetchCount();
             long max = DateUtil.getCurrentTimeMillis();
-            int offset = 0;
-            // 循环获取该区间内的待重试事件，每次获取eventFatchCount条，直到获取不到
-            int iterCount = 0;// 循环次数
-            try {
-                logger.info("[PigeonEvent][EVENT_JOB_Exception] queueTotalSize:{}............",
-                        eventRepository.getExceptionEventCount());
-            } catch (Exception e) {
-                logger.error("[PigeonEvent][EVENT_JOB_Exception]" + e.getMessage(), e);
-            }
+            int loopCount=0;
             while (true) {
-                if (iterCount >= 200) {// 一次任务最多循环200次
+                if(loopCount++>200)
+                {
+                    logger.warn("异常重试任务循环执行200次,事件仍然未发送完成,请检查程序是否异常");
                     break;
                 }
-                iterCount++;
-
                 Map<String, String> resultMap = new HashMap<>();
                 try {
-                    long total = eventRepository.getExceptionEventCount(min, max);
-                    logger.info(
-                            "[PigeonEvent][EVENT_JOB_Exception] min:[{}],max:[{}],offset:[{}],count:[{}]-->total:[{}],iterCount:[{}]",
-                            min, max, offset, count, total, iterCount);
-                    resultMap = eventRepository.extractExceptionalEvent(min, max, offset, count);
+                    //每次从redis内取出retryFetchCount条事件,防止内存溢出,循环获取,直到该区间内事件取完
+                    resultMap = eventRepository.extractExceptionalEvent(min, max, 0, publisherConfigParams.getRetryFetchCount());
+                    if (resultMap == null || resultMap.isEmpty()) {
+                        lastExecuteTime = max;
+                        break;
+                    }
                 } catch (Exception e) {
-                    logger.error("[PigeonEvent][EVENT_JOB_Exception]从redis中获取待重试的事件发生异常", e);
+                    logger.error("从异常队列中获取待重试的事件发生异常", e);
                     break;
                 }
 
-                lastExecuteTime = max;
-
-                // 如果获取的对象为空，跳出
-                if (resultMap == null || resultMap.isEmpty()) {
-                    break;
-                }
-
-                int mapSize = resultMap.size();
-                final int countDownSize = Integer.min(mapSize, 10);
-                logger.info("[PigeonEvent][EVENT_JOB_Exception] mapSize:[{}],countDownSize:[{}]............", mapSize,
-                        countDownSize);
-                CountDownExecutor countDownExecutor = CountDownExecutor.newCountDown(countDownSize,
-                        "pigeon-retryQueueTask");
-                int num = 0;
+                logger.info("从异常队列中获取到 [{}]条待重试记录,开始重试", resultMap.size());
                 for (Map.Entry<String, String> item : resultMap.entrySet()) {
                     try {
-                        countDownExecutor.addRunner(() -> {
-                            logger.info(
-                                    "[PigeonEvent][EVENT_JOB_Exception]TaskEventRetrySend,eventkey:{},eventValue:{}",
-                                    item.getKey(), item.getValue());
-                            eventSendExecutor.sendEvent(item.getKey(), item.getValue());
-                            logger.info(
-                                    "[PigeonEvent][EVENT_JOB_Exception]TaskEventRetrySend finished,eventkey:{},eventValue:{}",
-                                    item.getKey(), item.getValue());
-                        });
-                        num++;
-                        if (num == countDownSize) {
-                            countDownExecutor.start();
-                            num = 0;
-                        }
-                    } catch (Exception e) {
-                        logger.error("[PigeonEvent][EVENT_JOB_Exception]数据内容解析或者SendEvent出错", e);
+                        eventSendExecutor.sendEvent(item.getKey(), item.getValue());
+                    } catch (Throwable e) {
+                        logger.error("异常事件重试发送失败", e);
                     }
-
                 }
-
+                
+                lastExecuteTime = max;
                 if (resultMap.size() < publisherConfigParams.getRetryFetchCount()) {
                     break;
                 }
@@ -254,9 +217,9 @@ public class PublishExceptionHandler {
             logger.error(e.getMessage(), e);
         } finally {
             isRun = false;
+            logger.info("异常重试任务执行结束,耗时=[{}]", (DateUtil.getCurrentTimeMillis() - time));
         }
-        logger.info("[PigeonEvent][EVENT_JOB_Exception]Exception Queue Job end[{}],isRun:{}............",
-                (DateUtil.getCurrentTimeMillis() - time), isRun);
+
     }
 
     /**

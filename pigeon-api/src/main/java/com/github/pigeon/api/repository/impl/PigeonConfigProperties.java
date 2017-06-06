@@ -16,7 +16,7 @@ import com.github.pigeon.api.utils.PigeonUtils;
  * 
  * @author liuhaoyong time : 2015年11月3日 下午7:12:28
  */
-@ConfigurationProperties("pigeon")
+@ConfigurationProperties(prefix="pigeon")
 public class PigeonConfigProperties {
 
     private static final Logger logger                          = LoggerFactory.getLogger(PigeonConfigProperties.class);
@@ -24,9 +24,9 @@ public class PigeonConfigProperties {
     public static final int     defaultMaxLocalQueueSize        = 10000;
 
     /**
-     * 应用名称，当前应用的唯一标识，redis里会用来作为前缀key
+     * 名称前缀，建议使用应用名称,redis里会用来作为前缀key
      */
-    private String              applicationName                 = "pigeonClient";
+    private String              namePrefix                 = "pigeonClient";
 
     /**
      * 订阅者配置模块名
@@ -91,7 +91,104 @@ public class PigeonConfigProperties {
     /**
      * 重试时每次从redis里获取的事件数量
      */
-    private int                 retryFetchCount                 = 50;
+    private int                 retryFetchCount                 = 100;
+
+
+    
+    public void setNamePrefix(String namePrefix) {
+        this.namePrefix = namePrefix;
+    }
+
+
+
+    public void setSubscribeConfigModuleName(String subscribeConfigModuleName) {
+        this.subscribeConfigModuleName = subscribeConfigModuleName;
+    }
+
+
+
+    public void setRedisExceptionQueue(String redisExceptionQueue) {
+        this.redisExceptionQueue = redisExceptionQueue;
+    }
+
+
+
+    public void setRedisExceptionMap(String redisExceptionMap) {
+        this.redisExceptionMap = redisExceptionMap;
+    }
+
+
+
+    public void setRedisNormalQueue(String redisNormalQueue) {
+        this.redisNormalQueue = redisNormalQueue;
+    }
+
+
+
+    public void setRedisNormalMap(String redisNormalMap) {
+        this.redisNormalMap = redisNormalMap;
+    }
+
+
+
+    public void setHttpConnectTimeoutInMillisecond(int httpConnectTimeoutInMillisecond) {
+        this.httpConnectTimeoutInMillisecond = httpConnectTimeoutInMillisecond;
+    }
+
+
+
+    public void setHttpSoTimeoutInMillisecond(int httpSoTimeoutInMillisecond) {
+        this.httpSoTimeoutInMillisecond = httpSoTimeoutInMillisecond;
+    }
+
+
+
+    public void setAcceptCorePoolSize(int acceptCorePoolSize) {
+        this.acceptCorePoolSize = acceptCorePoolSize;
+    }
+
+
+
+    public void setAcceptMaxPoolSize(int acceptMaxPoolSize) {
+        this.acceptMaxPoolSize = acceptMaxPoolSize;
+    }
+
+
+
+    public void setAcceptQueueSize(int acceptQueueSize) {
+        this.acceptQueueSize = acceptQueueSize;
+    }
+
+
+
+    public void setSendCorePoolSize(int sendCorePoolSize) {
+        this.sendCorePoolSize = sendCorePoolSize;
+    }
+
+
+
+    public void setSendMaxPoolSize(int sendMaxPoolSize) {
+        this.sendMaxPoolSize = sendMaxPoolSize;
+    }
+
+
+
+    public void setSendQueueSize(int sendQueueSize) {
+        this.sendQueueSize = sendQueueSize;
+    }
+
+
+
+    public void setRetryIntervalInMinitues(long retryIntervalInMinitues) {
+        this.retryIntervalInMinitues = retryIntervalInMinitues;
+    }
+
+
+
+    public void setRetryFetchCount(int retryFetchCount) {
+        this.retryFetchCount = retryFetchCount;
+    }
+
 
 
     public int getSendQueueSize() {
@@ -188,16 +285,16 @@ public class PigeonConfigProperties {
     }
 
     public String getApplicationName() {
-        if (StringUtils.isBlank(applicationName)) {
+        if (StringUtils.isBlank(namePrefix)) {
             InetAddress inetAddress = PigeonUtils.getLocalHostAddress();
             if (inetAddress != null) {
-                applicationName = inetAddress.getHostName() + "_" + inetAddress.getHostAddress();
+                namePrefix = inetAddress.getHostName() + "_" + inetAddress.getHostAddress();
             } else {
-                applicationName = RandomStringUtils.randomAlphanumeric(10) + DateUtil.getCurrentTimeMillis();
+                namePrefix = RandomStringUtils.randomAlphanumeric(10) + DateUtil.getCurrentTimeMillis();
             }
-            logger.warn("[PigeonEvent]->applicationName failed to get,so give you a random name:{}", applicationName);
+            logger.warn("[PigeonEvent]->applicationName failed to get,so give you a random name:{}", namePrefix);
         }
-        return applicationName;
+        return namePrefix;
     }
 
 }

@@ -80,7 +80,9 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
             public void configurationChanged(ConfigurationEvent event) {
                 if (StringUtils.startsWith(event.getPropertyName(),
                         pigeonConfigProperties.getSubscribeConfigModuleName() + ".")) {
+                    logger.info("监听到订阅者配置变更事件,开始更新缓存");
                     initSubscribeConfig();
+                    logger.info("订阅者配置缓存更新结束");
                 }
 
             }
@@ -104,7 +106,7 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
         if (null != args && !args.isEmpty()) {
             velocityContext.putAll(args);
         }
-        velocityContext.put(eventType, event);
+        velocityContext.put("event", event);
 
         final List<EventSubscriberConfig> result = new ArrayList<>();
         for (EventSubscriberConfig item : subscribeConfigList) {
@@ -199,11 +201,11 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
             //设置convertor
             Object obj = PigeonUtils.getBean(applicationContext, item.getConvertor());
             if (obj == null) {
-                logger.error("event builder config invalid, id={},beanName={}",
+                logger.error("event convertor config invalid, id={},beanName={}",
                         item.getId(), item.getConvertor());
                 return null;
             }
-            config.setConvertor((EventConvertor<?,?>) obj);
+            config.setConvertor((EventConvertor<?>) obj);
 
             //设置sender
             config.setProtocol(EventPublishProtocol.valueOf(StringUtils.upperCase(item.getProtocol())));
@@ -217,7 +219,7 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
 
             //设置其他参数
             config.setFilterExpression(item.getFilterExpression());
-            config.setMaxRetryTimes(item.getMasRetryTimes());
+            config.setMaxRetryTimes(item.getMaxRetryTimes());
             config.setTargetAddress(item.getTargetAddress());
             config.setEventType(item.getEventType());
             config.setPersist(item.isPersist());

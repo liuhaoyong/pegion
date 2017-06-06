@@ -109,7 +109,7 @@ public class DomainEventPublisher {
             final List<EventSubscriberConfig> subscriberList = subseriberConfigRepository
                     .getEventSubscriberConfig(event, args);
             if (CollectionUtils.isEmpty(subscriberList)) {
-                logger.info("无订阅者,{}", event);
+                logger.info("无订阅者,eventKey={}", eventKey);
                 return true;
             }
 
@@ -142,9 +142,9 @@ public class DomainEventPublisher {
      * @return
      * @throws Exception
      */
-    private EventWrapper buildEventWrapper(DomainEvent event, EventSubscriberConfig config, String eventKey) {
+    public EventWrapper buildEventWrapper(DomainEvent event, EventSubscriberConfig config, String eventKey) {
         EventConvertor convertor = config.getConvertor();
-        Object eventContent = convertor.convert(event, config);
+        String eventContent = convertor.convert(event, config);
         String targetAddress = getTargetAddress(convertor,event,config);
         if (eventContent == null || StringUtils.isBlank(targetAddress)) {
             logger.error(
@@ -155,12 +155,12 @@ public class DomainEventPublisher {
 
         EventWrapper result = new EventWrapper();
         result.setConfigId(config.getId());
-        result.setEvent(eventContent);
+        result.setContent(eventContent);
         result.setTargetAddress(targetAddress);
         result.setSentTimes(0);
         result.setEventType(event.getClass().getSimpleName());
         result.setEventKey(eventKey);
-        if (result.getEvent() == null) {
+        if (result.getContent() == null) {
             return null;
         }
         return result;

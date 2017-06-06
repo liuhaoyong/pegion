@@ -1,6 +1,5 @@
 package com.github.pigeon.api.model;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.builder.ToStringStyle;
 
@@ -9,44 +8,42 @@ import org.apache.commons.lang.builder.ToStringStyle;
  * 
  * @author liuhaoyong 2017年5月16日 上午10:11:26
  */
-public class EventWrapper extends CommonEvent{
-
-    private static final long serialVersionUID = -6297104699061739039L;
+public class EventWrapper {
 
     /**
      * 目标地址
      */
-    private String targetAddress;
-
-    /**
-     * 应用名
-     */
-    private String appName;
+    private String            targetAddress;
 
     /**
      * 订阅者配置ID
      */
-    private long configId;
+    private long              configId;
 
     /**
      * 已发送的次数
      */
-    private int sentTimes;
+    private int               sentTimes;
 
     /**
      * 事件类型
      */
-    private String eventType;
+    private String            eventType;
 
     /**
-     * 事件对象
+     * 发送给消费者的真实内容,convertor转换后
      */
-    private Object event;
+    private String            content;
 
     /**
      * 事件发送结果
      */
-    private String sendResult;
+    private String            sendResult;
+    
+    /**
+     * 事件业务唯一标识
+     */
+    private String            eventKey;
 
     public boolean isRetry() {
         return sentTimes > 0;
@@ -84,7 +81,6 @@ public class EventWrapper extends CommonEvent{
         this.targetAddress = targetAddress;
     }
 
-
     public long getConfigId() {
         return configId;
     }
@@ -93,30 +89,29 @@ public class EventWrapper extends CommonEvent{
         this.configId = configId;
     }
 
-    public Object getEvent() {
-        return event;
+    public String getContent() {
+        return content;
     }
 
-    public void setEvent(Object event) {
-        this.event = event;
+    public void setContent(String content) {
+        this.content = content;
     }
 
     /**
+     * 用来唯一标识一个待发送的消息 事件订阅者ID+事件类型+事件业务key
+     * 
      * @return
      */
     public String genUniformEventKey() {
-        if (StringUtils.isBlank(eventType)) {
-            return getEventKey();
-        }
-        return this.eventType + "||" + getEventKey();
+        return this.configId + "||" + this.eventType + "||" + this.eventKey;
     }
 
-    public String getAppName() {
-        return appName;
+    public String getEventKey() {
+        return eventKey;
     }
 
-    public void setAppName(String appName) {
-        this.appName = appName;
+    public void setEventKey(String eventKey) {
+        this.eventKey = eventKey;
     }
 
     @Override

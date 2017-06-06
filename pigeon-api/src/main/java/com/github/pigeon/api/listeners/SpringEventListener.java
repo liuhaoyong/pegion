@@ -2,7 +2,6 @@ package com.github.pigeon.api.listeners;
 
 
 
-import com.github.pigeon.api.model.DomainEvent;
 import com.github.pigeon.api.model.EventSendResult;
 
 /**
@@ -18,6 +17,6 @@ public interface SpringEventListener {
      * @param event
      * @return
      */
-    EventSendResult handleEvent(DomainEvent event);
+    EventSendResult handleEvent(String event);
 
 }

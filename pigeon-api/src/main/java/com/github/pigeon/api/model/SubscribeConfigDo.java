@@ -24,7 +24,7 @@ public class SubscribeConfigDo{
 
     private String memo;
 
-    private int masRetryTimes;
+    private int maxRetryTimes;
     
     private boolean isPersist=true;
 
@@ -86,12 +86,12 @@ public class SubscribeConfigDo{
         this.memo = memo;
     }
 
-    public int getMasRetryTimes() {
-        return masRetryTimes;
+    public int getMaxRetryTimes() {
+        return maxRetryTimes;
     }
 
-    public void setMasRetryTimes(int masRetryTimes) {
-        this.masRetryTimes = masRetryTimes;
+    public void setMaxRetryTimes(int masRetryTimes) {
+        this.maxRetryTimes = masRetryTimes;
     }
 
 

@@ -22,7 +22,6 @@ import com.github.pigeon.api.repository.EventRepository;
 import com.github.pigeon.api.repository.SubscriberConfigRepository;
 import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
 import com.github.pigeon.api.utils.PigeonUtils;
-import com.github.pigeon.api.utils.executors.CountDownExecutor;
 import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
 import com.github.pigeon.api.utils.executors.MutexTaskExecutor;
 
@@ -72,13 +71,12 @@ public class EventPublishExecutor {
             @Override
             public void run() {
                 logger.info("任务启动，处理长期在发送队列中的事件");
-                MutexTaskExecutor.execute(60*60, publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate, false,
-                        () -> {
+                MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate,
+                        false, () -> {
                             recover();
                         });
             }
-        }, 2, 5, TimeUnit.MINUTES);
-
+        }, 1, 5, TimeUnit.MINUTES);
     }
 
     /**
@@ -147,14 +145,11 @@ public class EventPublishExecutor {
     }
 
     /**
-     * 针对长期在持久化队列里的任务，执行恢复重试， 防止系统重启等原因导致的队列中的任务没有被处理掉
+     * 针对10分钟内还在持久化队列里的任务，执行恢复重试， 防止系统重启等原因导致的队列中的任务没有被处理掉
      */
     public void recover() {
-        long time = System.currentTimeMillis();
         long min = 0;
-        long max = DateUtils.addMinutes(new Date(), -5).getTime(); //取五分钟以前的数据
-        int count = publisherConfigParams.getRetryFetchCount();
-        int offset = 0;
+        long max = DateUtils.addMinutes(new Date(), -10).getTime(); //取10分钟以前的数据
         int iterCount = 0;//循环次数
         try {
             if (isRun) {
@@ -163,54 +158,36 @@ public class EventPublishExecutor {
             }
             isRun = true;
             while (true) {
-                if (iterCount >= 200) {//一次任务最多循环200次
+                if (iterCount >= 500) {//一次任务最多循环200次
                     break;
                 }
                 iterCount++;
 
                 Map<String, String> resultMap;
                 try {
-                    long total = eventRepository.getEventCount(min, max);
-                    logger.info("长期在处理中的任务信息， min:[{}],max:[{}],offset:[{}],count:[{}]-->total:[{}],iterCount:[{}]",
-                            min, max, offset, count, total, iterCount);
-                    resultMap = eventRepository.extractEvent(min, max, offset, count);
+                    resultMap = eventRepository.extractEvent(min, max, 0, publisherConfigParams.getRetryFetchCount());
                 } catch (Exception e) {
                     logger.error("从正常队列中获取待重试的事件发生异常", e);
                     break;
                 }
-
                 //如果获取的对象为空，跳出
                 if (resultMap == null || resultMap.isEmpty()) {
                     break;
                 }
 
-                int mapSize = resultMap.size();
-                final int countDownSize = Integer.min(mapSize, 10);
-                CountDownExecutor countDownExecutor = CountDownExecutor.newCountDown(countDownSize,
-                        "pigeon-normalQueueTask");
-                int num = 0;
+                logger.info("从正常队列中获取到 [{}]条长期没有消费掉的消息,开始重试", resultMap.size());
                 for (Map.Entry<String, String> item : resultMap.entrySet()) {
                     try {
-                        for (int i = 0; i < countDownSize; i++) {
-                            countDownExecutor.addRunner(() -> {
-                                sendEvent(item.getKey(), item.getValue());
-                            });
-                        }
-                        num++;
-                        if (num == countDownSize) {
-                            countDownExecutor.start();
-                            num = 0;
-                        }
+                        sendEvent(item.getKey(), item.getValue());
                     } catch (Exception e) {
                         logger.error("[PigeonEvent][EVENT_JOB_Normal]数据内容解析或者SendEvent出错,event:" + item, e);
                     }
                 }
 
-                if (resultMap.size() < count) {
+                if (resultMap.size() < publisherConfigParams.getRetryFetchCount()) {
                     break;
                 }
             }
-
         } finally {
             isRun = false;
         }

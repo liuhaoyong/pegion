@@ -1,5 +1,6 @@
 package com.github.pigeon.api.convertor;
 
+import com.alibaba.fastjson.JSON;
 import com.github.pigeon.api.model.DomainEvent;
 import com.github.pigeon.api.model.EventSubscriberConfig;
 
@@ -9,12 +10,12 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
  * @author liuhaoyong
  * time : 2015年11月3日 上午10:17:08
  */
-public class DefaultSpringProtocolConvertor implements EventConvertor<DomainEvent,DomainEvent> {
+public class DefaultSpringProtocolConvertor implements EventConvertor<DomainEvent> {
 
 
     @Override
-    public DomainEvent convert(DomainEvent event, EventSubscriberConfig config) {
-        return event;
+    public String convert(DomainEvent event, EventSubscriberConfig config) {
+        return JSON.toJSONString(event);
     }
 
     @Override

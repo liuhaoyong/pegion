@@ -119,8 +119,7 @@ public class EventSubscriberConfig {
         //velocity解析
         String velocityExpr = null;
         try{
-            velocityExpr = StringUtils.replace(StringUtils.containsIgnoreCase(this.filterExpression, "${") ? this.filterExpression : "${" + this.filterExpression + "}", ";", "");
-            return VelocityUtil.isTrue(velocityExpr,eventContext);
+            return VelocityUtil.isTrue(this.filterExpression,eventContext);
         }catch (Exception e){
             logger.error("[PigeonEvent]velocityError,expr=" + velocityExpr + ",paramMap=" + eventContext,e );
         }

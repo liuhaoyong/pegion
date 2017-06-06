@@ -10,15 +10,15 @@ import com.github.pigeon.api.model.EventSubscriberConfig;
  * @author liuhaoyong
  * time : 2015年11月3日 上午10:06:09
  */
-public interface EventConvertor<RESULT,REQUEST_EVENT extends DomainEvent> {
+public interface EventConvertor<REQUEST_EVENT extends DomainEvent> {
     
     /**
-     * 转换后生成的对象可以是任何类型
+     * 转换后的内容
      * @param event
      * @param config
      * @return
      */
-    RESULT convert(REQUEST_EVENT event, EventSubscriberConfig config) ;
+    String convert(REQUEST_EVENT event, EventSubscriberConfig config) ;
     
     /**
      *  返回事件接收方的目标地址

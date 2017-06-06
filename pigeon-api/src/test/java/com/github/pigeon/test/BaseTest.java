@@ -1,6 +1,5 @@
 package com.github.pigeon.test;
 
-import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -21,7 +20,6 @@ import org.springframework.web.client.RestTemplate;
 import com.github.diamond.client.PropertiesConfiguration;
 import com.github.pigeon.api.PigeonAutoConfiguration;
 import com.github.pigeon.api.listeners.SpringEventListener;
-import com.github.pigeon.api.model.DomainEvent;
 import com.github.pigeon.api.model.EventSendResult;
 import com.github.pigeon.test.BaseTest.InitConfiguration;
 
@@ -84,13 +82,15 @@ public class BaseTest {
             SpringEventListener result = new SpringEventListener() {
                 
                 @Override
-                public EventSendResult handleEvent(DomainEvent event) {
-                    System.out.print("事件发送成功"+ToStringBuilder.reflectionToString(event));
+                public EventSendResult handleEvent(String event) {
+                    System.out.print("事件处理成功:" +event);
                     return EventSendResult.getSuccessResult();
                 }
             };
             return result;
         }
+        
+        
         
             
     }

@@ -27,12 +27,12 @@ public class HttpSender implements EventSender {
     public EventSendResult send(EventWrapper eventContent, EventSubscriberConfig config) {
         long startTime = System.currentTimeMillis();
         try {
-            EventSendResult result =  restTemplate.postForObject(eventContent.getTargetAddress(), eventContent.getEvent(),
+            EventSendResult result =  restTemplate.postForObject(eventContent.getTargetAddress(), eventContent.getContent(),
                     EventSendResult.class);
-            logger.info("http事件发送完成，耗时[{}],[{}]",startTime-System.currentTimeMillis(), eventContent);
+            logger.info("http事件发送完成，result={}, 耗时={},content={}",result, startTime-System.currentTimeMillis(), eventContent);
             return result;
         } catch (Throwable e) {
-            logger.error("事件发送异常,耗时[{}],[{}]",startTime-System.currentTimeMillis(), eventContent,  e);
+            logger.error("事件发送异常,耗时[{}],[{}]",System.currentTimeMillis() - startTime, eventContent,  e);
             return EventSendResult.getFailResult(e.getMessage(), true);
         }
     }

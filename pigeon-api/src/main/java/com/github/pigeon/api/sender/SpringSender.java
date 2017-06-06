@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 
 import com.github.pigeon.api.listeners.SpringEventListener;
-import com.github.pigeon.api.model.DomainEvent;
 import com.github.pigeon.api.model.EventSendResult;
 import com.github.pigeon.api.model.EventSubscriberConfig;
 import com.github.pigeon.api.model.EventWrapper;
@@ -46,7 +45,7 @@ public class SpringSender implements EventSender {
         }
 
         try {
-            return ((SpringEventListener) o).handleEvent((DomainEvent) eventContent.getEvent());
+            return ((SpringEventListener) o).handleEvent(eventContent.getContent());
         } catch (Exception e) {
             logger.error("[PigeonEvent]Faied to handle event by {} bean]", eventContent.getTargetAddress(), e);
             return EventSendResult.getFailResult("未知异常:" + e.getMessage()+"-->"+ PigeonUtils.printErrorTrace(e), false);
