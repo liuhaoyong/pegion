@@ -6,6 +6,7 @@ import java.util.TreeMap;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.client.RestTemplate;
 
 import com.alibaba.fastjson.JSON;
 import com.github.pigeon.api.DomainEventPublisher;
@@ -46,6 +47,9 @@ public class EventPublisherTest  extends BaseTest{
     
     @Autowired
     private PigeonConfigProperties pigeonConfigProperties;
+    
+    @Autowired
+    private RestTemplate restTemplate;
     
     @Test
     public void testPublishEvent() {
@@ -194,6 +198,14 @@ public class EventPublisherTest  extends BaseTest{
         publishExceptionHandler.handleExceptionQueue();
         TreeMap<String,String> map = eventRepository.extractExceptionalEvent(DateUtil.addMinutes(new Date(), -25).getTime(), new Date().getTime(), 0, 10);
         Assert.assertNull(map);
+    }
+    
+    
+    @Test
+    public void restPostTest()
+    {
+        String result= restTemplate.postForObject("http://172.16.20.234:8080/renotify/505", "", String.class);
+        System.out.println(result);
     }
     
     

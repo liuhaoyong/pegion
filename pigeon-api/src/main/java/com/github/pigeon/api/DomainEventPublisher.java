@@ -91,7 +91,6 @@ public class DomainEventPublisher {
                     doPublish(event, args);
                 }
             });
-            logger.info("事件发布成功, event={}, map={},elapsed={}", event, args, System.currentTimeMillis() - time);
             return true;
         } catch (Exception e) {
             logger.error("事件发布异常, event={},map={},elapsed={}", event, args, System.currentTimeMillis() - time, e);
