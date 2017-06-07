@@ -97,7 +97,7 @@ public final class DateUtil {
      * @return
      */
     public static Date addHours(Date date, int hours) {
-        return DateUtils.addHours(date, hours * 60);
+        return DateUtils.addHours(date, hours );
     }
 
     /**
@@ -109,7 +109,7 @@ public final class DateUtil {
      * @return
      */
     public static Date addMinutes(Date date, int minutes) {
-        return DateUtils.addMinutes(date, minutes * 60);
+        return DateUtils.addMinutes(date, minutes);
     }
 
     /**、

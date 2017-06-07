@@ -38,4 +38,8 @@ public class NotifyAddressGetTest {
         
         
     }
+    
+    public static void main(String[] args) {
+     
+    }
 }
