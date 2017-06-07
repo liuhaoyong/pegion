@@ -33,11 +33,11 @@ public class HttpSender implements EventSender {
                     String.class);
             if(StringUtils.equalsIgnoreCase(SUCCESS_RESULT, StringUtils.trim(result)))
             {
-                logger.info("http事件发送成功，耗时={},content={}", startTime-System.currentTimeMillis(), eventContent);
+                logger.info("http事件发送成功，耗时={},content={}", System.currentTimeMillis()-startTime, eventContent);
                 return EventSendResult.getSuccessResult();
             }else
             {
-                logger.info("http事件发送失败，耗时={},response={}, content={}",result, startTime-System.currentTimeMillis(), eventContent);
+                logger.info("http事件发送失败，耗时={},response={}, content={}",result, System.currentTimeMillis()-startTime, eventContent);
                 return EventSendResult.getFailResult(StringUtils.left(result, 100), true);
             }
         } catch (Throwable e) {
