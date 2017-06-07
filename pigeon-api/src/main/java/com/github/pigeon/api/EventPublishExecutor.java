@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import javax.annotation.PostConstruct;
@@ -66,7 +67,11 @@ public class EventPublishExecutor {
      */
     @PostConstruct
     public void init() {
-        processingExecutor = Executors.newScheduledThreadPool(1);
+        processingExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+            public Thread newThread(Runnable r) {
+                return new Thread(r,"PROCESSING-RECOVER");
+            }
+        });
         processingExecutor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
