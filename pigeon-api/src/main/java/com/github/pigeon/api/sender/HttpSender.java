@@ -42,7 +42,7 @@ public class HttpSender implements EventSender {
             }
         } catch (Throwable e) {
             logger.error("http事件发送异常,耗时[{}],[{}]",System.currentTimeMillis() - startTime, eventContent,  e);
-            return EventSendResult.getFailResult(e.getMessage(), true);
+            return EventSendResult.getFailResult(StringUtils.left(e.getMessage(), 100), true);
         }
     }
 
