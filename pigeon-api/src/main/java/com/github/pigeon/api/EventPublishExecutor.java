@@ -75,7 +75,6 @@ public class EventPublishExecutor {
         processingExecutor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                logger.info("任务启动，处理长期在发送队列中的事件");
                 MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate,
                         false, () -> {
                             recover();

@@ -69,7 +69,6 @@ public class PublishExceptionHandler {
         executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                logger.info("异常事件重试任务启动");
                 MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getExceptionQueueTaskLockName(), redisTemplate,
                         false, () -> {
                             handleExceptionQueue();
