@@ -33,7 +33,7 @@ public class DomainEventPublisher {
     /**
      * 事件发送执行器
      */
-    private EventPublishExecutor       eventSendExecutor;
+    private EventPublishExecutor       eventPublishExecutor;
 
     /**
      * 事件仓储
@@ -54,7 +54,7 @@ public class DomainEventPublisher {
                                 SubscriberConfigRepository subseriberConfigFactory,
                                 PigeonConfigProperties publisherConfigParams, MDCThreadPoolExecutor acceptThreadPool) {
         this.eventRepository = eventRepository;
-        this.eventSendExecutor = eventSendExecutor;
+        this.eventPublishExecutor = eventSendExecutor;
         this.subseriberConfigRepository = subseriberConfigFactory;
         this.acceptThreadPool = acceptThreadPool;
     }
@@ -121,7 +121,7 @@ public class DomainEventPublisher {
                         eventRepository.persistEvent(eventWrapper);
                     }
 
-                    eventSendExecutor.sendEvent(item, eventWrapper);
+                    eventPublishExecutor.sendEvent(item, eventWrapper);
                 } catch (Exception e) {
                     logger.error("事件发送异常,eventKey={},event:{}, configID={}", eventKey, event, item.getId(), e);
                     continue;

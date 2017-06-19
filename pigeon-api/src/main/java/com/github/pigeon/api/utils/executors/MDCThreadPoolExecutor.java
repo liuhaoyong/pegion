@@ -164,6 +164,8 @@ public class MDCThreadPoolExecutor extends ExecutorConfigurationSupport implemen
                 //执行任务前清楚MDC上下文，以解决MDC线程上下问继承父线程上下文的问题
                 MDC.clear();
             }
+            
+            
         };
         if (this.allowCoreThreadTimeOut) {
             executor.allowCoreThreadTimeOut(true);
