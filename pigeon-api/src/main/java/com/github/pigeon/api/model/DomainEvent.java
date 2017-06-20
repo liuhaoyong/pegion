@@ -16,5 +16,11 @@ public interface DomainEvent extends Serializable {
      * @return
      */
     String getEventKey();
-
+    
+    /**
+     * 关联日志MDC：同一MDC关联查询整个事件处理过程
+     *
+     * @return
+     */
+    String getMdcKey();
 }
