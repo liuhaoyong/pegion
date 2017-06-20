@@ -7,6 +7,7 @@ import java.util.Map;
 import javax.xml.bind.ValidationException;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jboss.logging.MDC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
@@ -101,7 +102,8 @@ public class DomainEventPublisher {
     private boolean doPublish(DomainEvent event, Map<String, Object> args) {
         long start = System.currentTimeMillis();
         try {
-
+        	MDC.put("reqKey", event.getMdcKey());
+        	
             final String eventKey = event.getEventKey();
 
             // 获得事件订阅者配置，如无事件订阅者，丢弃消息
@@ -159,6 +161,7 @@ public class DomainEventPublisher {
         result.setSentTimes(0);
         result.setEventType(event.getClass().getSimpleName());
         result.setEventKey(eventKey);
+        result.setMdcKey(event.getMdcKey());
         if (result.getContent() == null) {
             return null;
         }

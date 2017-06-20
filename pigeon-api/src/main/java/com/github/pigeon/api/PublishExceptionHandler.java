@@ -15,6 +15,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.github.pigeon.api.model.EventSendResult;
@@ -214,7 +215,9 @@ public class PublishExceptionHandler {
                         eventSendExecutor.sendEvent(item.getKey(), item.getValue());
                     } catch (Throwable e) {
                         logger.error("异常事件重试发送失败", e);
-                    }
+                    } finally {
+						MDC.clear();
+					}
                 }
 
                 lastExecuteTime = max;

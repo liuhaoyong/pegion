@@ -227,6 +227,8 @@ public class EventPublisherTest  extends BaseTest{
         
         private String eventKey; 
         
+        private String mdcKey = "Test";
+        
 
         public String getNotifyAddress() {
             return notifyAddress;
@@ -268,6 +270,11 @@ public class EventPublisherTest  extends BaseTest{
         public void setPwd(String pwd) {
             this.pwd = pwd;
         }
+
+		@Override
+		public String getMdcKey() {
+			return mdcKey;
+		}
         
         
     }

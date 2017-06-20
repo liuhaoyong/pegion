@@ -44,8 +44,14 @@ public class EventWrapper {
      * 事件业务唯一标识
      */
     private String            eventKey;
+    
+    /**
+     * 关联日志MDC：同一MDC关联查询整个事件处理过程
+     *
+     */
+    private String mdcKey;
 
-    public boolean isRetry() {
+	public boolean isRetry() {
         return sentTimes > 0;
     }
 
@@ -114,6 +120,13 @@ public class EventWrapper {
         this.eventKey = eventKey;
     }
 
+    public String getMdcKey() {
+		return mdcKey;
+	}
+
+	public void setMdcKey(String mdcKey) {
+		this.mdcKey = mdcKey;
+	}
     @Override
     public String toString() {
         return ToStringBuilder.reflectionToString(this, ToStringStyle.SHORT_PREFIX_STYLE);

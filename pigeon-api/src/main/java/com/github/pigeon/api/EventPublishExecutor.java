@@ -13,6 +13,7 @@ import javax.annotation.PreDestroy;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
 import org.apache.curator.framework.CuratorFramework;
+import org.jboss.logging.MDC;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -129,6 +130,8 @@ public class EventPublishExecutor {
         EventSendResult result = null;
         boolean isPersist = config.isPersist();
         try {
+        	MDC.put("reqKey", event.getMdcKey());
+        	
             result = config.getEventSender().send(event, config);
             if (isPersist) {
                 if (result.isSuccess()) {
