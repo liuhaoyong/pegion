@@ -16,7 +16,7 @@ import com.github.pigeon.api.utils.PigeonUtils;
  * 
  * @author liuhaoyong time : 2015年11月3日 下午7:12:28
  */
-@ConfigurationProperties(prefix="pigeon")
+@ConfigurationProperties(prefix = "pigeon")
 public class PigeonConfigProperties {
 
     private static final Logger logger                          = LoggerFactory.getLogger(PigeonConfigProperties.class);
@@ -26,7 +26,7 @@ public class PigeonConfigProperties {
     /**
      * 名称前缀，建议使用应用名称,redis里会用来作为前缀key
      */
-    private String              namePrefix                 = "pigeonClient";
+    private String              namePrefix                      = "pigeonClient";
 
     /**
      * 订阅者配置模块名
@@ -52,8 +52,6 @@ public class PigeonConfigProperties {
      */
     private String              redisNormalMap                  = "NORMAL_EVENT_MAP";
 
-
-
     /**
      * 当使用http投递消息时的连接超时时间
      */
@@ -76,13 +74,12 @@ public class PigeonConfigProperties {
     /**
      * sender线程池相关配置
      */
-    private int                 sendCorePoolSize        = 10;
+    private int                 sendCorePoolSize                = 10;
 
-    private int                 sendMaxPoolSize      = 20;
-    
-    private int                 sendQueueSize      =  defaultMaxLocalQueueSize;
-    
-    
+    private int                 sendMaxPoolSize                 = 20;
+
+    private int                 sendQueueSize                   = defaultMaxLocalQueueSize;
+
     /**
      * 异常事件的重试间隔执行时间，单位分
      */
@@ -92,127 +89,91 @@ public class PigeonConfigProperties {
      * 重试时每次从redis里获取的事件数量
      */
     private int                 retryFetchCount                 = 100;
-
-
     
+    /**
+     * zk服务器地址, ip:port,ip:port格式
+     */
+    private String              zkServerAddress;
+
     public void setNamePrefix(String namePrefix) {
         this.namePrefix = namePrefix;
     }
-
-
 
     public void setSubscribeConfigModuleName(String subscribeConfigModuleName) {
         this.subscribeConfigModuleName = subscribeConfigModuleName;
     }
 
-
-
     public void setRedisExceptionQueue(String redisExceptionQueue) {
         this.redisExceptionQueue = redisExceptionQueue;
     }
-
-
 
     public void setRedisExceptionMap(String redisExceptionMap) {
         this.redisExceptionMap = redisExceptionMap;
     }
 
-
-
     public void setRedisNormalQueue(String redisNormalQueue) {
         this.redisNormalQueue = redisNormalQueue;
     }
-
-
 
     public void setRedisNormalMap(String redisNormalMap) {
         this.redisNormalMap = redisNormalMap;
     }
 
-
-
     public void setHttpConnectTimeoutInMillisecond(int httpConnectTimeoutInMillisecond) {
         this.httpConnectTimeoutInMillisecond = httpConnectTimeoutInMillisecond;
     }
-
-
 
     public void setHttpSoTimeoutInMillisecond(int httpSoTimeoutInMillisecond) {
         this.httpSoTimeoutInMillisecond = httpSoTimeoutInMillisecond;
     }
 
-
-
     public void setAcceptCorePoolSize(int acceptCorePoolSize) {
         this.acceptCorePoolSize = acceptCorePoolSize;
     }
-
-
 
     public void setAcceptMaxPoolSize(int acceptMaxPoolSize) {
         this.acceptMaxPoolSize = acceptMaxPoolSize;
     }
 
-
-
     public void setAcceptQueueSize(int acceptQueueSize) {
         this.acceptQueueSize = acceptQueueSize;
     }
-
-
 
     public void setSendCorePoolSize(int sendCorePoolSize) {
         this.sendCorePoolSize = sendCorePoolSize;
     }
 
-
-
     public void setSendMaxPoolSize(int sendMaxPoolSize) {
         this.sendMaxPoolSize = sendMaxPoolSize;
     }
-
-
 
     public void setSendQueueSize(int sendQueueSize) {
         this.sendQueueSize = sendQueueSize;
     }
 
-
-
     public void setRetryIntervalInMinitues(long retryIntervalInMinitues) {
         this.retryIntervalInMinitues = retryIntervalInMinitues;
     }
-
-
 
     public void setRetryFetchCount(int retryFetchCount) {
         this.retryFetchCount = retryFetchCount;
     }
 
-
-
     public int getSendQueueSize() {
         return sendQueueSize;
     }
-
-
 
     public int getSendCorePoolSize() {
         return sendCorePoolSize;
     }
 
-
-
     public int getSendMaxPoolSize() {
         return sendMaxPoolSize;
     }
 
-
-
     public String getSubscribeConfigModuleName() {
         return subscribeConfigModuleName;
     }
-
 
     public static int getDefaultmaxlocalqueuesize() {
         return defaultMaxLocalQueueSize;
@@ -226,7 +187,6 @@ public class PigeonConfigProperties {
         return retryFetchCount;
     }
 
-
     public int getHttpConnectTimeoutInMillisecond() {
         return httpConnectTimeoutInMillisecond;
     }
@@ -234,7 +194,6 @@ public class PigeonConfigProperties {
     public int getHttpSoTimeoutInMillisecond() {
         return httpSoTimeoutInMillisecond;
     }
-
 
     public String getRedisRetryQueue() {
         return getApplicationName() + split_str + redisExceptionQueue;
@@ -282,6 +241,16 @@ public class PigeonConfigProperties {
 
     public int getAcceptQueueSize() {
         return acceptQueueSize;
+    }
+    
+    
+
+    public String getZkServerAddress() {
+        return zkServerAddress;
+    }
+
+    public void setZkServerAddress(String zkServerAddress) {
+        this.zkServerAddress = zkServerAddress;
     }
 
     public String getApplicationName() {

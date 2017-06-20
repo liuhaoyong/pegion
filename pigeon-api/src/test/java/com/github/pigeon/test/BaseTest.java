@@ -6,7 +6,6 @@ import org.apache.http.impl.client.HttpClients;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.WebClientAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,7 +28,7 @@ import com.github.pigeon.test.BaseTest.InitConfiguration;
  * @author liuhaoyong 2017年5月17日 下午3:54:22
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes={WebClientAutoConfiguration.class,PropertyPlaceholderAutoConfiguration.class,InitConfiguration.class,RedisAutoConfiguration.class,PigeonAutoConfiguration.class})
+@SpringBootTest(classes={WebClientAutoConfiguration.class,InitConfiguration.class,RedisAutoConfiguration.class,PigeonAutoConfiguration.class})
 public class BaseTest {
     
     
@@ -42,10 +41,10 @@ public class BaseTest {
         @Autowired
         private RestTemplateBuilder builder;
 
-        @Value("${http.client.connect.timeout}")
+        @Value("${http.client.connect.timeout:10000}")
         private int connectTimeout = 10 * 1000;
 
-        @Value("${http.client.read.timeout}")
+        @Value("${http.client.read.timeout:60000}")
         private int readTimeout = 60 * 1000;
 
 

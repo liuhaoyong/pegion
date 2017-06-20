@@ -12,6 +12,7 @@ import javax.annotation.PreDestroy;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.time.DateUtils;
+import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -33,7 +34,7 @@ import com.github.pigeon.api.utils.executors.MutexTaskExecutor;
  */
 public class EventPublishExecutor {
 
-    private static final Logger        logger          = LoggerFactory.getLogger(EventPublishExecutor.class);
+    private static final Logger        logger = LoggerFactory.getLogger(EventPublishExecutor.class);
 
     PublishExceptionHandler            publishExceptionHandler;
 
@@ -49,16 +50,20 @@ public class EventPublishExecutor {
 
     private StringRedisTemplate        redisTemplate;
 
-    private static volatile boolean    isRun           = false;
+    private CuratorFramework           zkClient;
+
+    private static volatile boolean    isRun  = false;
 
     public EventPublishExecutor(SubscriberConfigRepository eventSubseriberConfigFactory,
                                 EventRepository eventRepository, PigeonConfigProperties publisherConfigParams,
-                                StringRedisTemplate redisTemplate, MDCThreadPoolExecutor sendExecutor) {
+                                StringRedisTemplate redisTemplate, MDCThreadPoolExecutor sendExecutor,
+                                CuratorFramework zkClient) {
         this.publisherConfigParams = publisherConfigParams;
         this.eventSubseriberConfigFactory = eventSubseriberConfigFactory;
         this.eventRepository = eventRepository;
         this.redisTemplate = redisTemplate;
         this.sendExecutor = sendExecutor;
+        this.zkClient = zkClient;
 
     }
 
@@ -75,10 +80,9 @@ public class EventPublishExecutor {
         recoverExecutor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate,
-                        false, () -> {
-                            recover();
-                        });
+                MutexTaskExecutor.execute(zkClient, publisherConfigParams.getNormalQueueTaskLockName(), () -> {
+                    recover();
+                });
             }
         }, 1, 5, TimeUnit.MINUTES);
     }

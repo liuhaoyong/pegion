@@ -12,6 +12,7 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.apache.commons.lang.StringUtils;
+import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -48,12 +49,16 @@ public class PublishExceptionHandler {
 
     private ScheduledExecutorService executor = null;
 
+    private CuratorFramework         zkClient;
+
     public PublishExceptionHandler(EventRepository eventRepository, EventPublishExecutor eventSendExecutor,
-                                   PigeonConfigProperties publisherConfigParams, StringRedisTemplate redisTemplate) {
+                                   PigeonConfigProperties publisherConfigParams, StringRedisTemplate redisTemplate,
+                                   CuratorFramework zkClient) {
         this.eventRepository = eventRepository;
         this.eventSendExecutor = eventSendExecutor;
         this.publisherConfigParams = publisherConfigParams;
         this.redisTemplate = redisTemplate;
+        this.zkClient = zkClient;
     }
 
     /**
@@ -63,14 +68,14 @@ public class PublishExceptionHandler {
     public void init() {
         executor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
             public Thread newThread(Runnable r) {
-                return new Thread(r,"EXCEPTION-RECOVER");
+                return new Thread(r, "EXCEPTION-RECOVER");
             }
         });
         executor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getExceptionQueueTaskLockName(), redisTemplate,
-                        false, () -> {
+                MutexTaskExecutor.execute(zkClient, publisherConfigParams.getExceptionQueueTaskLockName(), 
+                        () -> {
                             handleExceptionQueue();
                         });
             }
@@ -174,7 +179,7 @@ public class PublishExceptionHandler {
             Date curDate = new Date();
 
             /**
-             * 如果第一次执行，捞取的事件区间为： [昨天, 当前时间], 防止系统长时间停机导致大量事件漏发 
+             * 如果第一次执行，捞取的事件区间为： [昨天, 当前时间], 防止系统长时间停机导致大量事件漏发
              * 如果不是第一次执行，捞取的事件区间为：[上次执行时间,当前事件]
              */
             if (lastExecuteTime <= 0l) {
@@ -183,17 +188,17 @@ public class PublishExceptionHandler {
                 min = lastExecuteTime;
             }
             long max = DateUtil.getCurrentTimeMillis();
-            int loopCount=0;
+            int loopCount = 0;
             while (true) {
-                if(loopCount++>200)
-                {
+                if (loopCount++ > 200) {
                     logger.warn("异常重试任务循环执行200次,事件仍然未发送完成,请检查程序是否异常");
                     break;
                 }
                 Map<String, String> resultMap = new HashMap<>();
                 try {
                     //每次从redis内取出retryFetchCount条事件,防止内存溢出,循环获取,直到该区间内事件取完
-                    resultMap = eventRepository.extractExceptionalEvent(min, max, 0, publisherConfigParams.getRetryFetchCount());
+                    resultMap = eventRepository.extractExceptionalEvent(min, max, 0,
+                            publisherConfigParams.getRetryFetchCount());
                     if (resultMap == null || resultMap.isEmpty()) {
                         lastExecuteTime = max;
                         break;
@@ -211,7 +216,7 @@ public class PublishExceptionHandler {
                         logger.error("异常事件重试发送失败", e);
                     }
                 }
-                
+
                 lastExecuteTime = max;
                 if (resultMap.size() < publisherConfigParams.getRetryFetchCount()) {
                     break;

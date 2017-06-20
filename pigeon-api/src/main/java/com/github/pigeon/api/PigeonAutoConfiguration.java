@@ -4,11 +4,15 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -43,22 +47,22 @@ import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
 public class PigeonAutoConfiguration {
 
     @Autowired
-    private PigeonConfigProperties         publisherConfigParams;
+    private PigeonConfigProperties  pigeonConfigProperties;
 
     @Autowired
-    private StringRedisTemplate           stringRedisTemplate;
+    private StringRedisTemplate     stringRedisTemplate;
 
     @Autowired
-    private PropertiesConfiguration       propertiesConfiguration;
+    private PropertiesConfiguration propertiesConfiguration;
 
     @Autowired
-    private RestTemplate                  restTemplate;
+    private RestTemplate            restTemplate;
 
     @Bean
     @ConditionalOnMissingBean(EventRepository.class)
     @ConditionalOnBean(StringRedisTemplate.class)
     public EventRepository eventRepository() {
-        EventRepository result = new RedisEventRepository(publisherConfigParams, stringRedisTemplate);
+        EventRepository result = new RedisEventRepository(pigeonConfigProperties, stringRedisTemplate);
         return result;
     }
 
@@ -67,7 +71,7 @@ public class PigeonAutoConfiguration {
     public SubscriberConfigRepository subscriberConfigRepository(ApplicationContext applicationContext,
                                                                  @Qualifier("eventSenderMap") Map<EventPublishProtocol, EventSender> eventSenderMap) {
         DiamondSubseriberConfigRepository result = new DiamondSubseriberConfigRepository(applicationContext,
-                propertiesConfiguration, publisherConfigParams, eventSenderMap);
+                propertiesConfiguration, pigeonConfigProperties, eventSenderMap);
         return result;
 
     }
@@ -76,19 +80,19 @@ public class PigeonAutoConfiguration {
     @ConditionalOnMissingBean(EventPublishExecutor.class)
     public EventPublishExecutor eventPublishExecutor(SubscriberConfigRepository eventSubseriberConfigFactory,
                                                      EventRepository eventRepository,
-                                                     @Qualifier("sendExecutor") MDCThreadPoolExecutor sendExecutor) {
+                                                     @Qualifier("sendExecutor") MDCThreadPoolExecutor sendExecutor, CuratorFramework zkClient) {
         EventPublishExecutor result = new EventPublishExecutor(eventSubseriberConfigFactory, eventRepository,
-                publisherConfigParams, stringRedisTemplate, sendExecutor);
+                pigeonConfigProperties, stringRedisTemplate, sendExecutor,zkClient);
         return result;
     }
 
     @Bean
     @ConditionalOnMissingBean(PublishExceptionHandler.class)
-    @ConditionalOnBean({ EventRepository.class, EventPublishExecutor.class })
+    @ConditionalOnBean({ EventRepository.class, EventPublishExecutor.class,  CuratorFramework.class})
     public PublishExceptionHandler publishExceptionHandler(EventRepository eventRepository,
-                                                           EventPublishExecutor eventSendExecutor) {
+                                                           EventPublishExecutor eventSendExecutor,CuratorFramework zkClient) {
         PublishExceptionHandler result = new PublishExceptionHandler(eventRepository, eventSendExecutor,
-                publisherConfigParams, stringRedisTemplate);
+                pigeonConfigProperties, stringRedisTemplate,zkClient);
         eventSendExecutor.publishExceptionHandler = result;
         return result;
     }
@@ -102,9 +106,9 @@ public class PigeonAutoConfiguration {
     public MDCThreadPoolExecutor normalEventSendExecutor() {
         MDCThreadPoolExecutor pigeonEventPublishExecutor = new MDCThreadPoolExecutor();
         pigeonEventPublishExecutor.setPname("sendExecutor");
-        pigeonEventPublishExecutor.setCorePoolSize(publisherConfigParams.getSendCorePoolSize());
-        pigeonEventPublishExecutor.setMaxPoolSize(publisherConfigParams.getSendMaxPoolSize());
-        pigeonEventPublishExecutor.setQueueCapacity(publisherConfigParams.getSendQueueSize());
+        pigeonEventPublishExecutor.setCorePoolSize(pigeonConfigProperties.getSendCorePoolSize());
+        pigeonEventPublishExecutor.setMaxPoolSize(pigeonConfigProperties.getSendMaxPoolSize());
+        pigeonEventPublishExecutor.setQueueCapacity(pigeonConfigProperties.getSendQueueSize());
         pigeonEventPublishExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         return pigeonEventPublishExecutor;
     }
@@ -118,23 +122,22 @@ public class PigeonAutoConfiguration {
     public MDCThreadPoolExecutor exceptionEventSendExecutor() {
         MDCThreadPoolExecutor pigeonEventSendExecutor = new MDCThreadPoolExecutor();
         pigeonEventSendExecutor.setPname("acceptExecutor");
-        pigeonEventSendExecutor.setCorePoolSize(publisherConfigParams.getAcceptCorePoolSize());
-        pigeonEventSendExecutor.setMaxPoolSize(publisherConfigParams.getAcceptMaxPoolSize());
-        pigeonEventSendExecutor.setQueueCapacity(publisherConfigParams.getAcceptQueueSize());
+        pigeonEventSendExecutor.setCorePoolSize(pigeonConfigProperties.getAcceptCorePoolSize());
+        pigeonEventSendExecutor.setMaxPoolSize(pigeonConfigProperties.getAcceptMaxPoolSize());
+        pigeonEventSendExecutor.setQueueCapacity(pigeonConfigProperties.getAcceptQueueSize());
         pigeonEventSendExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         return pigeonEventSendExecutor;
     }
 
     @Bean
     @ConditionalOnMissingBean(DomainEventPublisher.class)
-    @ConditionalOnBean(value = { EventRepository.class, EventPublishExecutor.class,
-            SubscriberConfigRepository.class })
+    @ConditionalOnBean(value = { EventRepository.class, EventPublishExecutor.class, SubscriberConfigRepository.class })
     public DomainEventPublisher domainEventPublisher(@Qualifier("acceptExecutor") MDCThreadPoolExecutor acceptExecutor,
                                                      EventRepository eventRepository,
                                                      EventPublishExecutor eventSendExecutor,
                                                      SubscriberConfigRepository subseriberConfigFactory) {
         DomainEventPublisher result = new DomainEventPublisher(eventRepository, eventSendExecutor,
-                subseriberConfigFactory, publisherConfigParams, acceptExecutor);
+                subseriberConfigFactory, pigeonConfigProperties, acceptExecutor);
         return result;
     }
 
@@ -158,5 +161,24 @@ public class PigeonAutoConfiguration {
         map.put(EventPublishProtocol.SPRING, new SpringSender(applicationContext));
         return map;
     }
+
+    @Bean
+    @ConditionalOnMissingBean(CuratorFramework.class)
+    @ConditionalOnProperty(name = "pigeon.zk-server-address", matchIfMissing=false)
+    public CuratorFramework curatorFramework() {
+        final CuratorFramework client = CuratorFrameworkFactory.newClient(
+                this.pigeonConfigProperties.getZkServerAddress(), 4000, 4000, new ExponentialBackoffRetry(1000, 3));
+        client.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                client.close();
+            }
+
+        }));
+        return client;
+    }
+
 
 }
