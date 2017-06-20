@@ -34,7 +34,7 @@ import com.github.pigeon.api.utils.executors.MutexTaskExecutor;
  */
 public class EventPublishExecutor {
 
-    private static final Logger        logger             = LoggerFactory.getLogger(EventPublishExecutor.class);
+    private static final Logger        logger          = LoggerFactory.getLogger(EventPublishExecutor.class);
 
     PublishExceptionHandler            publishExceptionHandler;
 
@@ -42,15 +42,15 @@ public class EventPublishExecutor {
 
     private MDCThreadPoolExecutor      sendExecutor;
 
+    private ScheduledExecutorService   recoverExecutor;
+
     private EventRepository            eventRepository;
 
     private PigeonConfigProperties     publisherConfigParams;
 
     private StringRedisTemplate        redisTemplate;
 
-    private ScheduledExecutorService   processingExecutor = null;
-
-    private static volatile boolean    isRun              = false;
+    private static volatile boolean    isRun           = false;
 
     public EventPublishExecutor(SubscriberConfigRepository eventSubseriberConfigFactory,
                                 EventRepository eventRepository, PigeonConfigProperties publisherConfigParams,
@@ -68,12 +68,12 @@ public class EventPublishExecutor {
      */
     @PostConstruct
     public void init() {
-        processingExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
+        recoverExecutor = Executors.newSingleThreadScheduledExecutor(new ThreadFactory() {
             public Thread newThread(Runnable r) {
-                return new Thread(r,"PROCESSING-RECOVER");
+                return new Thread(r, "PROCESSING-RECOVER");
             }
         });
-        processingExecutor.scheduleAtFixedRate(new Runnable() {
+        recoverExecutor.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
                 MutexTaskExecutor.execute(60 * 60, publisherConfigParams.getNormalQueueTaskLockName(), redisTemplate,
@@ -105,7 +105,7 @@ public class EventPublishExecutor {
     }
 
     /**
-     * 发送事件 异步处理 主要处理正常的publish
+     * 发送事件
      *
      * @param config
      * @param event
@@ -165,7 +165,7 @@ public class EventPublishExecutor {
             }
             isRun = true;
             while (true) {
-                if (iterCount >= 500) {//一次任务最多循环200次
+                if (iterCount >= 500) {//一次任务最多循环500次
                     break;
                 }
                 iterCount++;
@@ -187,7 +187,7 @@ public class EventPublishExecutor {
                     try {
                         sendEvent(item.getKey(), item.getValue());
                     } catch (Exception e) {
-                        logger.error("[PigeonEvent][EVENT_JOB_Normal]数据内容解析或者SendEvent出错,event:" + item, e);
+                        logger.error("数据内容解析或者SendEvent出错,event:{}", item, e);
                     }
                 }
 
@@ -205,8 +205,8 @@ public class EventPublishExecutor {
      */
     @PreDestroy
     public void destory() {
-        if (processingExecutor != null) {
-            processingExecutor.shutdown();
+        if (recoverExecutor != null) {
+            recoverExecutor.shutdown();
         }
     }
 
