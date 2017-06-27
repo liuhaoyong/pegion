@@ -5,19 +5,17 @@ import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.client.RestTemplate;
 
@@ -40,6 +38,7 @@ import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
  * 
  * @author liuhaoyong 2017年5月17日 上午11:40:58
  */
+@Order(100)
 @Configuration
 @ConditionalOnMissingBean(DomainEventPublisher.class)
 @AutoConfigureAfter(RedisAutoConfiguration.class)
@@ -57,6 +56,9 @@ public class PigeonAutoConfiguration {
 
     @Autowired
     private RestTemplate            restTemplate;
+
+    @Autowired
+    private CuratorFramework        zkClient;
 
     @Bean
     @ConditionalOnMissingBean(EventRepository.class)
@@ -80,19 +82,19 @@ public class PigeonAutoConfiguration {
     @ConditionalOnMissingBean(EventPublishExecutor.class)
     public EventPublishExecutor eventPublishExecutor(SubscriberConfigRepository eventSubseriberConfigFactory,
                                                      EventRepository eventRepository,
-                                                     @Qualifier("sendExecutor") MDCThreadPoolExecutor sendExecutor, CuratorFramework zkClient) {
+                                                     @Qualifier("sendExecutor") MDCThreadPoolExecutor sendExecutor) {
         EventPublishExecutor result = new EventPublishExecutor(eventSubseriberConfigFactory, eventRepository,
-                pigeonConfigProperties, stringRedisTemplate, sendExecutor,zkClient);
+                pigeonConfigProperties, stringRedisTemplate, sendExecutor, zkClient);
         return result;
     }
 
     @Bean
     @ConditionalOnMissingBean(PublishExceptionHandler.class)
-    @ConditionalOnBean({ EventRepository.class, EventPublishExecutor.class,  CuratorFramework.class})
+    @ConditionalOnBean({ EventRepository.class, EventPublishExecutor.class, CuratorFramework.class })
     public PublishExceptionHandler publishExceptionHandler(EventRepository eventRepository,
-                                                           EventPublishExecutor eventSendExecutor,CuratorFramework zkClient) {
+                                                           EventPublishExecutor eventSendExecutor) {
         PublishExceptionHandler result = new PublishExceptionHandler(eventRepository, eventSendExecutor,
-                pigeonConfigProperties, stringRedisTemplate,zkClient);
+                pigeonConfigProperties, stringRedisTemplate, zkClient);
         eventSendExecutor.publishExceptionHandler = result;
         return result;
     }
@@ -161,24 +163,5 @@ public class PigeonAutoConfiguration {
         map.put(EventPublishProtocol.SPRING, new SpringSender(applicationContext));
         return map;
     }
-
-    @Bean
-    @ConditionalOnMissingBean(CuratorFramework.class)
-    @ConditionalOnProperty(name = "pigeon.zk-server-address", matchIfMissing=false)
-    public CuratorFramework curatorFramework() {
-        final CuratorFramework client = CuratorFrameworkFactory.newClient(
-                this.pigeonConfigProperties.getZkServerAddress(), 4000, 4000, new ExponentialBackoffRetry(1000, 3));
-        client.start();
-        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
-
-            @Override
-            public void run() {
-                client.close();
-            }
-
-        }));
-        return client;
-    }
-
 
 }

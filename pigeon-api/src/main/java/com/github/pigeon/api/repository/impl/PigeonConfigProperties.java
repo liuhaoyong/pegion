@@ -89,11 +89,6 @@ public class PigeonConfigProperties {
      * 重试时每次从redis里获取的事件数量
      */
     private int                 retryFetchCount                 = 100;
-    
-    /**
-     * zk服务器地址, ip:port,ip:port格式
-     */
-    private String              zkServerAddress;
 
     public void setNamePrefix(String namePrefix) {
         this.namePrefix = namePrefix;
@@ -244,14 +239,6 @@ public class PigeonConfigProperties {
     }
     
     
-
-    public String getZkServerAddress() {
-        return zkServerAddress;
-    }
-
-    public void setZkServerAddress(String zkServerAddress) {
-        this.zkServerAddress = zkServerAddress;
-    }
 
     public String getApplicationName() {
         if (StringUtils.isBlank(namePrefix)) {
