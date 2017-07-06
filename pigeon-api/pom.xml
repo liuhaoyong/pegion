@@ -12,7 +12,7 @@
 
 	<groupId>com.github.pegion</groupId>
 	<artifactId>pigeon-api</artifactId>
-	<version>1.0.2017063001</version>
+	<version>1.0.2017070601</version>
 	<packaging>jar</packaging>
 
 	<properties>

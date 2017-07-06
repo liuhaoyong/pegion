@@ -1,10 +1,14 @@
 package com.github.pigeon.api;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -15,9 +19,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.web.client.RestTemplate;
 
 import com.github.diamond.client.PropertiesConfiguration;
 import com.github.pigeon.api.convertor.DefaultHttpProtocolConvertor;
@@ -38,7 +40,6 @@ import com.github.pigeon.api.utils.executors.MDCThreadPoolExecutor;
  * 
  * @author liuhaoyong 2017年5月17日 上午11:40:58
  */
-@Order(100)
 @Configuration
 @ConditionalOnMissingBean(DomainEventPublisher.class)
 @AutoConfigureAfter(RedisAutoConfiguration.class)
@@ -53,9 +54,6 @@ public class PigeonAutoConfiguration {
 
     @Autowired
     private PropertiesConfiguration propertiesConfiguration;
-
-    @Autowired
-    private RestTemplate            restTemplate;
 
     @Autowired
     private CuratorFramework        zkClient;
@@ -158,8 +156,26 @@ public class PigeonAutoConfiguration {
     @Bean(name = "eventSenderMap")
     @ConditionalOnMissingBean(name = "eventSenderMap")
     public Map<EventPublishProtocol, EventSender> eventSenderMap(ApplicationContext applicationContext) {
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(pigeonConfigProperties.getHttpConnectTimeoutInMillisecond())
+                .setConnectionRequestTimeout(pigeonConfigProperties.getHttpConnectTimeoutInMillisecond())
+                .setSocketTimeout(pigeonConfigProperties.getHttpSoTimeoutInMillisecond()).build();
+        CloseableHttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig)
+                .setMaxConnTotal(200).setMaxConnPerRoute(50).build();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    httpClient.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }));
+
         Map<EventPublishProtocol, EventSender> map = new HashMap<EventPublishProtocol, EventSender>();
-        map.put(EventPublishProtocol.HTTP, new HttpSender(restTemplate));
+        map.put(EventPublishProtocol.HTTP, new HttpSender(httpClient));
         map.put(EventPublishProtocol.SPRING, new SpringSender(applicationContext));
         return map;
     }

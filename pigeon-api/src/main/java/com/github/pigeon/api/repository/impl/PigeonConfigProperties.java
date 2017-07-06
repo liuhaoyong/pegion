@@ -55,7 +55,7 @@ public class PigeonConfigProperties {
     /**
      * 当使用http投递消息时的连接超时时间
      */
-    private int                 httpConnectTimeoutInMillisecond = 3000;
+    private int                 httpConnectTimeoutInMillisecond = 1000;
 
     /**
      * 当使用http投递消息时的读超时时间
