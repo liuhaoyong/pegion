@@ -9,6 +9,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -160,8 +161,13 @@ public class PigeonAutoConfiguration {
                 .setConnectTimeout(pigeonConfigProperties.getHttpConnectTimeoutInMillisecond())
                 .setConnectionRequestTimeout(pigeonConfigProperties.getHttpConnectTimeoutInMillisecond())
                 .setSocketTimeout(pigeonConfigProperties.getHttpSoTimeoutInMillisecond()).build();
+
+        PoolingHttpClientConnectionManager cm = new PoolingHttpClientConnectionManager();
+        cm.setMaxTotal(200);
+        cm.setDefaultMaxPerRoute(50);
+        cm.setValidateAfterInactivity(1000);
         CloseableHttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig)
-                .setMaxConnTotal(200).setMaxConnPerRoute(50).build();
+                .setConnectionManager(cm).setMaxConnTotal(200).setMaxConnPerRoute(50).build();
 
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override
