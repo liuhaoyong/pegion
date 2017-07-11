@@ -114,6 +114,11 @@ public class BaseTest {
 ```
 
 ```
+public class EventPublisherTest  extends BaseTest{
+    
+    @Autowired
+    private DomainEventPublisher eventPublisher;
+    
     @Test
     public void testPublishEvent() {
         TestEvent event = new TestEvent();
@@ -124,15 +129,13 @@ public class BaseTest {
         boolean isSuccess = eventPublisher.publish(event);
         Assert.assertEquals(true, isSuccess);
     }
+}
 ```
 
 2. 安装superdiamond，配置事件订阅者，增加事件订阅者配置的模块名，并在该模块下配置相关的订阅者
 如一个合法的订阅者配置示例如下：
 ```
-{"protocol":"HTTP","appName":"PAYMENT-ENGINE","masRetryTimes":3,
-"targetAddress":"http://localhost:8080/event/test",
-"eventType":"TestEvent",
-"id":1,"convertor":"defaultHttpProtocolConvertor"}
+{"convertor":"defaultSpringProtocolConvertor","protocol":"spring","appName":"Test","maxRetryTimes":3,"targetAddress":"testSpringListener","eventType":"TestEvent","id":2}
 ```
 
 ## 更多
