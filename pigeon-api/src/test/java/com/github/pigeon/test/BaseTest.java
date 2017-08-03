@@ -1,11 +1,15 @@
 package com.github.pigeon.test;
 
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.boot.autoconfigure.web.WebClientAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -89,6 +93,13 @@ public class BaseTest {
             return result;
         }
         
+        
+        @Bean(destroyMethod="close", initMethod="start")
+        @ConditionalOnMissingBean(CuratorFramework.class)
+        public CuratorFramework curatorFramework() {
+            return CuratorFrameworkFactory.newClient("172.16.20.1:2181",
+                    4000, 4000, new ExponentialBackoffRetry(1000, 3));
+        }
         
         
             

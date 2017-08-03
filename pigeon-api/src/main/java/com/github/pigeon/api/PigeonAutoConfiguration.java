@@ -57,7 +57,7 @@ public class PigeonAutoConfiguration {
 
     @Autowired
     private CuratorFramework        zkClient;
-
+    
     @Bean
     @ConditionalOnMissingBean(EventRepository.class)
     @ConditionalOnBean(StringRedisTemplate.class)

@@ -45,7 +45,7 @@ public class HttpSender implements EventSender {
                 logger.info("http事件发送成功，耗时={},content={}", System.currentTimeMillis() - startTime, eventContent);
                 return EventSendResult.getSuccessResult();
             } else {
-                logger.info("http事件发送失败，耗时={},response={}, content={}", result, System.currentTimeMillis() - startTime,
+                logger.info("http事件发送失败，耗时={},response={}, content={}", System.currentTimeMillis() - startTime, result,
                         eventContent);
                 return EventSendResult.getFailResult(StringUtils.left(result, 100), true);
             }
@@ -66,7 +66,7 @@ public class HttpSender implements EventSender {
             httpPost.setEntity(new StringEntity(content, "UTF-8"));
             response = httpClient.execute(httpPost);
             String resultString = EntityUtils.toString(response.getEntity(), "utf-8");
-            logger.info("http sender result, statusLine={},body={}", response.getStatusLine(), resultString);
+            logger.info("http sender result, statusLine={}, body={}", response.getStatusLine(), resultString);
             return resultString;
         }
         finally {
@@ -75,7 +75,6 @@ public class HttpSender implements EventSender {
                 response.close();
             }
         }
-
     }
 
 }
