@@ -12,7 +12,7 @@
 
 	<groupId>com.github.pegion</groupId>
 	<artifactId>pigeon-api</artifactId>
-	<version>1.0.2017080301</version>
+	<version>1.0.2017080302</version>
 	<packaging>jar</packaging>
 
 	<properties>
@@ -42,7 +42,7 @@
 		<dependency>
 			<groupId>org.github.diamond</groupId>
 			<artifactId>super-diamond-client</artifactId>
-			<version>1.0.2017063001</version>
+			<version>1.0.2017073101</version>
 		</dependency>
 
 		<dependency>
