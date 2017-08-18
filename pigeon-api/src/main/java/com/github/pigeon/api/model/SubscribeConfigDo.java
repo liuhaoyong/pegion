@@ -28,6 +28,15 @@ public class SubscribeConfigDo{
     
     private boolean isPersist=true;
 
+    private String successString ;
+
+    public String getSuccessString() {
+        return successString;
+    }
+
+    public void setSuccessString(String successString) {
+        this.successString = successString;
+    }
 
     public long getId() {
         return id;

@@ -223,6 +223,7 @@ public class DiamondSubseriberConfigRepository implements SubscriberConfigReposi
             config.setTargetAddress(item.getTargetAddress());
             config.setEventType(item.getEventType());
             config.setPersist(item.isPersist());
+            config.setSuccessString(item.getSuccessString());
             return config;
         } catch (Exception e) {
             logger.error("event subscriber config invalid, {}", item, e);

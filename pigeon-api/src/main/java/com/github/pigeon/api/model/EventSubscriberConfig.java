@@ -62,6 +62,19 @@ public class EventSubscriberConfig {
      * 是否持久化消息
      */
     private boolean isPersist = true;
+    
+    /**
+     * 通知成功返回的字符串
+     */
+    private String successString;
+    
+    public String getSuccessString() {
+        return successString;
+    }
+
+    public void setSuccessString(String successString) {
+        this.successString = successString;
+    }
 
     public String getEventType() {
         return eventType;

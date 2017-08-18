@@ -5,6 +5,7 @@ import java.util.TreeMap;
 
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,6 +21,7 @@ import com.github.pigeon.api.repository.impl.DiamondSubseriberConfigRepository;
 import com.github.pigeon.api.repository.impl.PigeonConfigProperties;
 import com.github.pigeon.api.repository.impl.RedisEventRepository;
 import com.github.pigeon.api.repository.impl.RedisEventRepository.OprTypeEnum;
+import com.github.pigeon.api.sender.HttpSender;
 import com.github.pigeon.api.utils.DateUtil;
 
 
@@ -50,6 +52,12 @@ public class EventPublisherTest  extends BaseTest{
     
     @Autowired
     private RestTemplate restTemplate;
+    
+//    public static void main(String[] args) {
+//        String ok =   StringUtils.replace(StringUtils.trim("\"OK\""), "\"", "");
+//        System.out.println(ok.equals("OK"));
+//    }
+    
     
     @Test
     public void testPublishEvent() {
@@ -200,12 +208,127 @@ public class EventPublisherTest  extends BaseTest{
         Assert.assertNull(map);
     }
     
-    
     @Test
     public void restPostTest()
     {
         String result= restTemplate.postForObject("http://172.16.20.234:8080/renotify/505", "", String.class);
         System.out.println(result);
+    }
+    
+    
+    @Test
+    public void tesstHttpSender() throws Exception
+    {        
+        HttpSender mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("\"OK\"");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        TestEvent content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        EventWrapper event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        EventSubscriberConfig config = new EventSubscriberConfig();
+        config.setSuccessString("OK");
+        EventSendResult result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isSuccess());
+        Mockito.reset(mockSender);
+        
+        
+        mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("\"OK\"");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        config = new EventSubscriberConfig();
+        result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isSuccess());
+        Mockito.reset(mockSender);
+        
+        
+        mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("OK");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        config = new EventSubscriberConfig();
+        config.setSuccessString("OK");
+        result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isSuccess());
+        Mockito.reset(mockSender);
+        
+        
+        mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("OK");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        config = new EventSubscriberConfig();
+        result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isSuccess());
+        Mockito.reset(mockSender);
+        
+        
+        mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("FAILED");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        config = new EventSubscriberConfig();
+        config.setSuccessString("FAILED");
+        result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isSuccess());
+        Mockito.reset(mockSender);
+        
+        
+        mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("FAILED");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        config = new EventSubscriberConfig();
+        result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(!result.isSuccess());
+        Mockito.reset(mockSender);
+
     }
     
     

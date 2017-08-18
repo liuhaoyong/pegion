@@ -20,9 +20,10 @@ import com.github.pigeon.api.model.EventWrapper;
  */
 public class HttpSender implements EventSender {
 
+    public static final String SUCCESS_RESULT = "OK";
     private static final Logger logger         = LoggerFactory.getLogger(HttpSender.class);
 
-    private static final String SUCCESS_RESULT = "OK";
+    
     private CloseableHttpClient httpClient;
 
     public HttpSender(CloseableHttpClient httpClient) {
@@ -40,8 +41,11 @@ public class HttpSender implements EventSender {
         
         long startTime = System.currentTimeMillis();
         try {
+            
+            String successString = StringUtils.isNotBlank(config.getSuccessString())  ?  config.getSuccessString() : SUCCESS_RESULT; 
+            
             String result = doPost(eventContent.getTargetAddress(), eventContent.getContent());
-            if (StringUtils.equalsIgnoreCase(SUCCESS_RESULT, StringUtils.trim(result))) {
+            if (StringUtils.equalsIgnoreCase(successString,StringUtils.replace(StringUtils.trim(result), "\"", ""))) {
                 logger.info("http事件发送成功，耗时={},content={}", System.currentTimeMillis() - startTime, eventContent);
                 return EventSendResult.getSuccessResult();
             } else {
