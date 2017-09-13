@@ -350,7 +350,7 @@ public class EventPublisherTest  extends BaseTest{
         event.setContent("{'aa'=123}");
         event.setTargetAddress("http://www.baidu.com");
         EventSubscriberConfig config = new EventSubscriberConfig();
-        config.setSuccessString("{Result: ok,ElapsedMilliseconds: 0,Success: true,ErrorCode: null,ErrorMessage: null,Exception: null}");
+        config.setSuccessString("{Result:ok,ElapsedMilliseconds:0,Success:true,ErrorCode:null,ErrorMessage:null,Exception:null}");
         EventSendResult result = mockSender.send(event, config);
         Assert.assertNotNull(result);
         Assert.assertTrue(result.isSuccess());
