@@ -339,7 +339,7 @@ public class EventPublisherTest  extends BaseTest{
     public void tesstHttpSenderFor() throws Exception
     {        
         HttpSender mockSender  = Mockito.mock(HttpSender.class);
-        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("{\"Result\": \"ok\",\"ElapsedMilliseconds\": 0,\"Success\": true,\"ErrorCode\": null,\"ErrorMessage\": null,\"Exception\": null}");
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("{Result:ok,ElapsedMilliseconds:0,Success:true,ErrorCode:null,ErrorMessage:null,Exception:null}");
         Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
         TestEvent content = new TestEvent();
         content.setId("sdfsdf");
@@ -355,6 +355,25 @@ public class EventPublisherTest  extends BaseTest{
         Assert.assertNotNull(result);
         Assert.assertTrue(result.isSuccess());
         Mockito.reset(mockSender);
+        
+        mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("OK");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        config = new EventSubscriberConfig();
+        config.setSuccessString("{Result:ok,ElapsedMilliseconds:0,Success:true,ErrorCode:null,ErrorMessage:null,Exception:null}");
+        result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isSuccess());
+        Mockito.reset(mockSender);
+
     }
     
     

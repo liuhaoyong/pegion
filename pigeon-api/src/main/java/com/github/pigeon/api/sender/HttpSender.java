@@ -22,10 +22,9 @@ import com.github.pigeon.api.model.EventWrapper;
  */
 public class HttpSender implements EventSender {
 
-    public static final String SUCCESS_RESULT = "OK";
+    public static final String  SUCCESS_RESULT = "OK";
     private static final Logger logger         = LoggerFactory.getLogger(HttpSender.class);
 
-    
     private CloseableHttpClient httpClient;
 
     public HttpSender(CloseableHttpClient httpClient) {
@@ -34,20 +33,19 @@ public class HttpSender implements EventSender {
 
     @Override
     public EventSendResult send(EventWrapper eventContent, EventSubscriberConfig config) {
-        
-        if(StringUtils.isBlank(eventContent.getContent()))
-        {
+
+        if (StringUtils.isBlank(eventContent.getContent())) {
             logger.warn("发送的事件内容为空,忽略");
             return EventSendResult.getSuccessResult();
         }
-        
+
         long startTime = System.currentTimeMillis();
         try {
-            
-            String successString = StringUtils.isNotBlank(config.getSuccessString())  ?  config.getSuccessString() : SUCCESS_RESULT; 
-            
+
             String result = doPost(eventContent.getTargetAddress(), eventContent.getContent());
-            if (StringUtils.equalsIgnoreCase(successString,StringUtils.replace(StringUtils.trim(result), "\"", ""))) {
+            result = StringUtils.replace(StringUtils.trim(result), "\"", ""); 
+            if (StringUtils.equalsIgnoreCase(result, SUCCESS_RESULT) || StringUtils.equalsIgnoreCase(
+                    config.getSuccessString(), result)) {
                 logger.info("http事件发送成功，耗时={},content={}", System.currentTimeMillis() - startTime, eventContent);
                 return EventSendResult.getSuccessResult();
             } else {
@@ -62,24 +60,22 @@ public class HttpSender implements EventSender {
     }
 
     public String doPost(String url, String content) throws Exception {
-        
+
         // 创建Httpclient对象
         CloseableHttpResponse response = null;
-        
+
         try {
             HttpPost httpPost = new HttpPost(url);
             httpPost.addHeader("Content-Type", "application/json");
             //加一个requestID, .net接收端有时需要用该值来作为唯一标识搜索日志
-            httpPost.addHeader("RequestID", StringUtils.replace(UUID.randomUUID().toString(),"-",""));
+            httpPost.addHeader("RequestID", StringUtils.replace(UUID.randomUUID().toString(), "-", ""));
             httpPost.setEntity(new StringEntity(content, "UTF-8"));
             response = httpClient.execute(httpPost);
             String resultString = EntityUtils.toString(response.getEntity(), "utf-8");
             logger.info("http sender result, statusLine={}, body={}", response.getStatusLine(), resultString);
             return resultString;
-        }
-        finally {
-            if(response!=null)
-            {
+        } finally {
+            if (response != null) {
                 response.close();
             }
         }
