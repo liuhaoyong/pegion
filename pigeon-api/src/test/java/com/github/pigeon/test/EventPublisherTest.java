@@ -335,6 +335,28 @@ public class EventPublisherTest  extends BaseTest{
     
     
     
+    @Test
+    public void tesstHttpSenderFor() throws Exception
+    {        
+        HttpSender mockSender  = Mockito.mock(HttpSender.class);
+        Mockito.when(mockSender.doPost(Mockito.anyString(), Mockito.anyString())).thenReturn("{\"Result\": \"ok\",\"ElapsedMilliseconds\": 0,\"Success\": true,\"ErrorCode\": null,\"ErrorMessage\": null,\"Exception\": null}");
+        Mockito.when(mockSender.send(Mockito.any(), Mockito.any())).thenCallRealMethod();
+        TestEvent content = new TestEvent();
+        content.setId("sdfsdf");
+        content.setName("sdfdsf");
+        content.setNotifyAddress("sdfsdf");
+        content.setPwd("dfdfds");
+        EventWrapper event  = new EventWrapper();
+        event.setContent("{'aa'=123}");
+        event.setTargetAddress("http://www.baidu.com");
+        EventSubscriberConfig config = new EventSubscriberConfig();
+        config.setSuccessString("{Result: ok,ElapsedMilliseconds: 0,Success: true,ErrorCode: null,ErrorMessage: null,Exception: null}");
+        EventSendResult result = mockSender.send(event, config);
+        Assert.assertNotNull(result);
+        Assert.assertTrue(result.isSuccess());
+        Mockito.reset(mockSender);
+    }
+    
     
     
     public static class TestEvent implements DomainEvent

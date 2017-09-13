@@ -6,9 +6,12 @@ import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.http.NoHttpResponseException;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.DefaultHttpRequestRetryHandler;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.protocol.HttpContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -57,7 +60,7 @@ public class PigeonAutoConfiguration {
 
     @Autowired
     private CuratorFramework        zkClient;
-    
+
     @Bean
     @ConditionalOnMissingBean(EventRepository.class)
     @ConditionalOnBean(StringRedisTemplate.class)
@@ -161,7 +164,23 @@ public class PigeonAutoConfiguration {
                 .setConnectionRequestTimeout(pigeonConfigProperties.getHttpConnectTimeoutInMillisecond())
                 .setSocketTimeout(pigeonConfigProperties.getHttpSoTimeoutInMillisecond()).build();
         CloseableHttpClient httpClient = HttpClients.custom().setDefaultRequestConfig(requestConfig)
-                .setMaxConnTotal(200).setMaxConnPerRoute(50).build();
+                .setMaxConnTotal(200).setMaxConnPerRoute(50).setRetryHandler(new DefaultHttpRequestRetryHandler() {
+                    // grep 'Retrying request to' info.log
+                    @Override
+                    public boolean retryRequest(IOException exception, int executionCount, HttpContext context) {
+                        boolean isRetry = super.retryRequest(exception, executionCount, context);
+                        if (isRetry) {
+                            return isRetry;
+                        }
+                        if (executionCount > super.getRetryCount()) {
+                            return isRetry;
+                        }
+                        if (exception instanceof NoHttpResponseException) {
+                            return true;
+                        }
+                        return isRetry;
+                    }
+                }).build();
 
         Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
             @Override

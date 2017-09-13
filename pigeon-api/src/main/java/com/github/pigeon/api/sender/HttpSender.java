@@ -1,5 +1,7 @@
 package com.github.pigeon.api.sender;
 
+import java.util.UUID;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -67,6 +69,8 @@ public class HttpSender implements EventSender {
         try {
             HttpPost httpPost = new HttpPost(url);
             httpPost.addHeader("Content-Type", "application/json");
+            //加一个requestID, .net接收端有时需要用该值来作为唯一标识搜索日志
+            httpPost.addHeader("RequestID", StringUtils.replace(UUID.randomUUID().toString(),"-",""));
             httpPost.setEntity(new StringEntity(content, "UTF-8"));
             response = httpClient.execute(httpPost);
             String resultString = EntityUtils.toString(response.getEntity(), "utf-8");
@@ -81,4 +85,8 @@ public class HttpSender implements EventSender {
         }
     }
 
+    
+    public static void main(String[] args) {
+        
+    }
 }
