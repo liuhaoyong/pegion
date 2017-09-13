@@ -85,8 +85,4 @@ public class HttpSender implements EventSender {
         }
     }
 
-    
-    public static void main(String[] args) {
-        
-    }
 }
