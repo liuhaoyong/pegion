@@ -119,6 +119,10 @@ public class DomainEventPublisher {
 
                 try {
                     EventWrapper eventWrapper = this.buildEventWrapper(event, item, eventKey);
+                    if(eventWrapper==null)
+                    {
+                        continue;
+                    }
                     if (item.isPersist()) {
                         eventRepository.persistEvent(eventWrapper);
                     }
@@ -146,12 +150,17 @@ public class DomainEventPublisher {
     public EventWrapper buildEventWrapper(DomainEvent event, EventSubscriberConfig config, String eventKey) {
         EventConvertor convertor = config.getConvertor();
         String eventContent = convertor.convert(event, config);
+        if(StringUtils.isBlank(eventContent))
+        {
+            logger.error("转换后事件内容为空, 请检查convertor逻辑是否有bug, subscriberConfig={}",config );
+            return null;
+        }
+        
         String targetAddress = getTargetAddress(convertor,event,config);
-        if (eventContent == null || StringUtils.isBlank(targetAddress)) {
-            logger.error(
-                    "转换后的事件内容或者目标地址为空, 忽略发送, 请检查时间订阅者配置是否正确， eventContent={},targetAddress={}, subscriberConfig={}",
-                    eventContent, targetAddress, config);
-            throw new RuntimeException("转换后的事件内容或者目标地址为空，忽略发送");
+        if (StringUtils.isBlank(targetAddress)) {
+            logger.info("事件接收地址为空, 忽略, eventContent={},subscriberConfig={}",
+                    eventContent,  config);
+            return null;
         }
 
         EventWrapper result = new EventWrapper();
@@ -162,16 +171,13 @@ public class DomainEventPublisher {
         result.setEventType(event.getClass().getSimpleName());
         result.setEventKey(eventKey);
         result.setMdcKey(event.getMdcKey());
-        if (result.getContent() == null) {
-            return null;
-        }
         return result;
     }
 
     /**
      * 获取目标地址
      * <p>1. 先通过convertor里的实现取通知地址
-     * <p>2. 当订阅配置里targetAddres为地址取值表达式时，执行该表达式取值
+     * <p>2. 当订阅配置里targetAddres为$开头的取值表达式时，执行该表达式取值
      * <p>3. 不是取值表达式，则认为配置的就是一个原始地址，直接返回
      * @param event
      * @param config
@@ -186,7 +192,7 @@ public class DomainEventPublisher {
         }
         
         String targetAddress = config.getTargetAddress();
-        if (StringUtils.startsWith(targetAddress, "${")) {
+        if (StringUtils.startsWith(targetAddress, "$")) {
             Map<String, Object> map = new HashMap<String, Object>();
             map.put("event", event);
             try {

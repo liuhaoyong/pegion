@@ -13,6 +13,8 @@ import com.alibaba.fastjson.JSON;
 import com.github.pigeon.api.DomainEventPublisher;
 import com.github.pigeon.api.EventPublishExecutor;
 import com.github.pigeon.api.PublishExceptionHandler;
+import com.github.pigeon.api.convertor.DefaultHttpProtocolConvertor;
+import com.github.pigeon.api.enums.EventPublishProtocol;
 import com.github.pigeon.api.model.DomainEvent;
 import com.github.pigeon.api.model.EventSendResult;
 import com.github.pigeon.api.model.EventSubscriberConfig;
@@ -449,6 +451,40 @@ public class EventPublisherTest  extends BaseTest{
         Assert.assertNotNull(result);
         Assert.assertTrue(result.isSuccess());
         Mockito.reset(mockSender);
+    }
+    
+    @Test
+    public void testBuildEventWraper(){
+        EventSubscriberConfig config = new EventSubscriberConfig();
+        config.setConvertor(new DefaultHttpProtocolConvertor());
+        config.setEventType("DomainEvent");
+        config.setId(1);
+        config.setMaxRetryTimes(10);
+        config.setProtocol(EventPublishProtocol.HTTP);
+        config.setTargetAddress("${event.notifyAddress}");
+        TestEvent event = new TestEvent();
+        event.setNotifyAddress("http://www.tuhutest.cn/1234");
+        EventWrapper wrapper = eventPublisher.buildEventWrapper(event, config, "sdfsdfsdf");
+        Assert.assertEquals(wrapper.getTargetAddress(), event.getNotifyAddress());
+        
+        event = new TestEvent();
+        event.setNotifyAddress(null);
+        config.setTargetAddress("$!{event.notifyAddress}");
+        wrapper = eventPublisher.buildEventWrapper(event, config, "sdfsdfsdf");
+        Assert.assertNull(wrapper);
+        
+        config.setTargetAddress("${event.notifyAddress}");
+        wrapper = eventPublisher.buildEventWrapper(event, config, "sdfsdfsdf");
+        Assert.assertNotNull(wrapper);
+        Assert.assertEquals(wrapper.getTargetAddress(), "${event.notifyAddress}");
+        
+        config.setTargetAddress("$!{event2.notifyAddress}");
+        wrapper = eventPublisher.buildEventWrapper(event, config, "sdfsdfsdf");
+        Assert.assertNull(wrapper);
+        
+        config.setTargetAddress("${event2.notifyAddress}");
+        wrapper = eventPublisher.buildEventWrapper(event, config, "sdfsdfsdf");
+        Assert.assertEquals(wrapper.getTargetAddress(),"${event2.notifyAddress}");
     }
     
     
